@@ -5,6 +5,7 @@ Content/
 DerivedDataCache/
 Intermediate/
 Saved/
+Config/DefaultEngine.ini
 
 # Visual Studio / Rider / IDE state
 .vs/

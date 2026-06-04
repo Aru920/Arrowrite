@@ -11,6 +11,7 @@
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Input/InputConfigDataAsset.h"
 #include "InputActionValue.h"
 #include "Player/PlayerEquipmentComponent.h"
 #include "Player/GamePlayerState.h"
@@ -48,6 +49,44 @@ UAbilitySystemComponent* APlayerCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+void APlayerCharacter::AddInputMappingContext(UInputMappingContext* MappingContext, int32 Priority)
+{
+	if (!MappingContext)
+	{
+		return;
+	}
+
+	if (IsLocallyControlled())
+	{
+		AddInputMappingContextLocal(MappingContext, Priority);
+		return;
+	}
+
+	if (HasAuthority())
+	{
+		ClientAddInputMappingContext(MappingContext, Priority);
+	}
+}
+
+void APlayerCharacter::RemoveInputMappingContext(UInputMappingContext* MappingContext)
+{
+	if (!MappingContext)
+	{
+		return;
+	}
+
+	if (IsLocallyControlled())
+	{
+		RemoveInputMappingContextLocal(MappingContext);
+		return;
+	}
+
+	if (HasAuthority())
+	{
+		ClientRemoveInputMappingContext(MappingContext);
+	}
+}
+
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -75,6 +114,63 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &ThisClass::StartSprinting);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &ThisClass::StopSprinting);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Canceled, this, &ThisClass::StopSprinting);
+	}
+
+	if (AbilityInputConfig)
+	{
+		for (const FTaggedInputAction& TaggedInputAction : AbilityInputConfig->AbilityInputActions)
+		{
+			if (!TaggedInputAction.InputAction || !TaggedInputAction.InputTag.IsValid())
+			{
+				continue;
+			}
+
+			EnhancedInputComponent->BindAction(TaggedInputAction.InputAction, ETriggerEvent::Started, this, &ThisClass::AbilityInputTagPressed, TaggedInputAction.InputTag);
+			EnhancedInputComponent->BindAction(TaggedInputAction.InputAction, ETriggerEvent::Completed, this, &ThisClass::AbilityInputTagReleased, TaggedInputAction.InputTag);
+			EnhancedInputComponent->BindAction(TaggedInputAction.InputAction, ETriggerEvent::Canceled, this, &ThisClass::AbilityInputTagReleased, TaggedInputAction.InputTag);
+		}
+	}
+}
+
+void APlayerCharacter::AddInputMappingContextLocal(UInputMappingContext* MappingContext, int32 Priority) const
+{
+	const APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController || !PlayerController->IsLocalController() || !MappingContext)
+	{
+		return;
+	}
+
+	ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return;
+	}
+
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+	if (InputSubsystem)
+	{
+		InputSubsystem->AddMappingContext(MappingContext, Priority);
+	}
+}
+
+void APlayerCharacter::RemoveInputMappingContextLocal(UInputMappingContext* MappingContext) const
+{
+	const APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController || !PlayerController->IsLocalController() || !MappingContext)
+	{
+		return;
+	}
+
+	ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return;
+	}
+
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+	if (InputSubsystem)
+	{
+		InputSubsystem->RemoveMappingContext(MappingContext);
 	}
 }
 
@@ -146,23 +242,33 @@ void APlayerCharacter::StopSprinting()
 	SetSprinting(false);
 }
 
+void APlayerCharacter::AbilityInputTagPressed(FGameplayTag InputTag)
+{
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->AbilityInputTagPressed(InputTag);
+	}
+}
+
+void APlayerCharacter::AbilityInputTagReleased(FGameplayTag InputTag)
+{
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->AbilityInputTagReleased(InputTag);
+	}
+}
+
 void APlayerCharacter::AddDefaultInputMappingContext() const
 {
-	const APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	if (!PlayerController || !PlayerController->IsLocalController() || !DefaultMappingContext)
-	{
-		return;
-	}
+	AddInputMappingContextLocal(DefaultMappingContext, 0);
+}
 
-	ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer();
-	if (!LocalPlayer)
-	{
-		return;
-	}
+void APlayerCharacter::ClientAddInputMappingContext_Implementation(UInputMappingContext* MappingContext, int32 Priority)
+{
+	AddInputMappingContextLocal(MappingContext, Priority);
+}
 
-	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-	if (InputSubsystem)
-	{
-		InputSubsystem->AddMappingContext(DefaultMappingContext, 0);
-	}
+void APlayerCharacter::ClientRemoveInputMappingContext_Implementation(UInputMappingContext* MappingContext)
+{
+	RemoveInputMappingContextLocal(MappingContext);
 }

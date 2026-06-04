@@ -5,12 +5,14 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "Character/BaseCharacter.h"
+#include "GameplayTagContainer.h"
 #include "PlayerCharacter.generated.h"
 
 class UAbilitySystemComponent;
 class UCameraComponent;
 class UCharacterStartupData;
 class UInputComponent;
+class UInputConfigDataAsset;
 class UInputAction;
 class UInputMappingContext;
 class UPlayerAbilitySystemComponent;
@@ -40,17 +42,33 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	UPlayerEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
 
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void AddInputMappingContext(UInputMappingContext* MappingContext, int32 Priority = 1);
+
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void RemoveInputMappingContext(UInputMappingContext* MappingContext);
+
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 private:
+	void AddInputMappingContextLocal(UInputMappingContext* MappingContext, int32 Priority) const;
+	void RemoveInputMappingContextLocal(UInputMappingContext* MappingContext) const;
 	void InitAbilityActorInfo();
 	void GiveStartupAbilities();
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void StartSprinting();
 	void StopSprinting();
+	void AbilityInputTagPressed(FGameplayTag InputTag);
+	void AbilityInputTagReleased(FGameplayTag InputTag);
 	void AddDefaultInputMappingContext() const;
+
+	UFUNCTION(Client, Reliable)
+	void ClientAddInputMappingContext(UInputMappingContext* MappingContext, int32 Priority);
+
+	UFUNCTION(Client, Reliable)
+	void ClientRemoveInputMappingContext(UInputMappingContext* MappingContext);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -73,6 +91,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> RunAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputConfigDataAsset> AbilityInputConfig;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability System", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCharacterStartupData> CharacterStartupData;

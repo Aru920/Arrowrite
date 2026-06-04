@@ -39,6 +39,11 @@ void UBaseAbilitySystemComponent::GiveStartupAbilities(const TArray<TSubclassOf<
 	}
 }
 
+void UBaseAbilitySystemComponent::GiveWeaponAbilities(const FWeaponAbilitySet& AbilitySet, int32 AbilityLevel)
+{
+	GiveStartupAbilities(AbilitySet.GrantedAbilities, AbilityLevel);
+}
+
 void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
 {
 	if (!InputTag.IsValid())
