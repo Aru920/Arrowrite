@@ -1,0 +1,17 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#pragma once
+
+#include "NativeGameplayTags.h"
+
+namespace ArrowriteGameplayTags
+{
+	ARROWRITE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Aim);
+	ARROWRITE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Fire);
+
+	ARROWRITE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Bow_Aim);
+	ARROWRITE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Bow_Fire);
+
+	ARROWRITE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Aiming);
+	ARROWRITE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_DrawingBow);
+}
