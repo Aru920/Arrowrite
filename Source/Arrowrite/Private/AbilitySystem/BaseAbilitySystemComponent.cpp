@@ -3,6 +3,7 @@
 #include "AbilitySystem/BaseAbilitySystemComponent.h"
 
 #include "AbilitySystem/Abilities/GameplayAbilityBase.h"
+#include "Abilities/GameplayAbility.h"
 
 void UBaseAbilitySystemComponent::GiveStartupAbilities(const TArray<TSubclassOf<UGameplayAbilityBase>>& StartupAbilities, int32 AbilityLevel)
 {
@@ -80,6 +81,23 @@ void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
 
 		AbilitySpecInputReleased(AbilitySpec);
 
+		if (!AbilitySpec.IsActive())
+		{
+			continue;
+		}
+
+		for (UGameplayAbility* AbilityInstance : AbilitySpec.GetAbilityInstances())
+		{
+			if (!AbilityInstance)
+			{
+				continue;
+			}
+
+			InvokeReplicatedEvent(
+				EAbilityGenericReplicatedEvent::InputReleased,
+				AbilitySpec.Handle,
+				AbilityInstance->GetCurrentActivationInfo().GetActivationPredictionKey());
+		}
 	}
 }
 

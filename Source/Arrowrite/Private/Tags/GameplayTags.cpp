@@ -12,4 +12,6 @@ namespace ArrowriteGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Aiming, "State.Aiming", "State tag applied while the player is aiming.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_DrawingBow, "State.DrawingBow", "State tag applied while the bow is being drawn.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Weapon_Bow, "Weapon.Bow", "Weapon tag for bow equipment.");
 }

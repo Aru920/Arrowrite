@@ -7,6 +7,7 @@
 #include "BaseWeapon.generated.h"
 
 class USkeletalMeshComponent;
+class UWeaponDataAsset;
 
 UCLASS()
 class ARROWRITE_API ABaseWeapon : public AActor
@@ -27,9 +28,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	USkeletalMeshComponent* GetWeaponMesh() const { return WeaponMesh; }
 
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	UWeaponDataAsset* GetWeaponData() const { return WeaponData; }
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	TObjectPtr<UWeaponDataAsset> WeaponData;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Weapon")
 	TObjectPtr<APawn> OwningPawn;
