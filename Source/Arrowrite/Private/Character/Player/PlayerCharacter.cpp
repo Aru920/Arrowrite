@@ -12,6 +12,7 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
+#include "Player/PlayerEquipmentComponent.h"
 #include "Player/GamePlayerState.h"
 
 APlayerCharacter::APlayerCharacter()
@@ -24,6 +25,8 @@ APlayerCharacter::APlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	EquipmentComponent = CreateDefaultSubobject<UPlayerEquipmentComponent>(TEXT("EquipmentComponent"));
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)

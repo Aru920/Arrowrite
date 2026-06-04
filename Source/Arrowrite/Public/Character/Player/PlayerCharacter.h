@@ -15,6 +15,7 @@ class UInputAction;
 class UInputMappingContext;
 class UPlayerAbilitySystemComponent;
 class UPlayerAttributeSet;
+class UPlayerEquipmentComponent;
 class USpringArmComponent;
 struct FInputActionValue;
 
@@ -36,6 +37,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ability System")
 	UPlayerAttributeSet* GetPlayerAttributeSet() const { return AttributeSet; }
 
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	UPlayerEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
+
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
@@ -54,6 +58,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<UCameraComponent> FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment")
+	TObjectPtr<UPlayerEquipmentComponent> EquipmentComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
