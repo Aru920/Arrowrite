@@ -3,28 +3,43 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystemInterface.h"
 #include "Character/BaseCharacter.h"
 #include "PlayerCharacter.generated.h"
 
+class UAbilitySystemComponent;
 class UCameraComponent;
 class UInputComponent;
 class UInputAction;
 class UInputMappingContext;
+class UPlayerAbilitySystemComponent;
+class UPlayerAttributeSet;
 class USpringArmComponent;
 struct FInputActionValue;
 
 UCLASS()
-class ARROWRITE_API APlayerCharacter : public ABaseCharacter
+class ARROWRITE_API APlayerCharacter : public ABaseCharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
 public:
 	APlayerCharacter();
 
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	UFUNCTION(BlueprintPure, Category = "Ability System")
+	UPlayerAbilitySystemComponent* GetPlayerAbilitySystemComponent() const { return AbilitySystemComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "Ability System")
+	UPlayerAttributeSet* GetPlayerAttributeSet() const { return AttributeSet; }
+
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 private:
+	void InitAbilityActorInfo();
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void StartSprinting();
@@ -49,4 +64,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> RunAction;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Ability System", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPlayerAbilitySystemComponent> AbilitySystemComponent;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Ability System", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPlayerAttributeSet> AttributeSet;
 };

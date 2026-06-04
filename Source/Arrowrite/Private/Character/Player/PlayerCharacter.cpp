@@ -2,6 +2,8 @@
 
 #include "Character/Player/PlayerCharacter.h"
 
+#include "AbilitySystem/Player/PlayerAbilitySystemComponent.h"
+#include "AbilitySystem/Player/PlayerAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -9,6 +11,7 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
+#include "Player/GamePlayerState.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -20,6 +23,25 @@ APlayerCharacter::APlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+}
+
+void APlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	InitAbilityActorInfo();
+}
+
+void APlayerCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	InitAbilityActorInfo();
+}
+
+UAbilitySystemComponent* APlayerCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -49,6 +71,23 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &ThisClass::StartSprinting);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &ThisClass::StopSprinting);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Canceled, this, &ThisClass::StopSprinting);
+	}
+}
+
+void APlayerCharacter::InitAbilityActorInfo()
+{
+	AGamePlayerState* GamePlayerState = GetPlayerState<AGamePlayerState>();
+	if (!GamePlayerState)
+	{
+		return;
+	}
+
+	AbilitySystemComponent = GamePlayerState->GetPlayerAbilitySystemComponent();
+	AttributeSet = GamePlayerState->GetPlayerAttributeSet();
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(GamePlayerState, this);
 	}
 }
 
