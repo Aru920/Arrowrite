@@ -3,9 +3,6 @@
 #include "AbilitySystem/Abilities/GameplayAbilityBase.h"
 
 #include "AbilitySystem/BaseAbilitySystemComponent.h"
-#include "AbilitySystem/Player/PlayerAbilitySystemComponent.h"
-#include "Character/Player/PlayerCharacter.h"
-#include "Player/GamePlayerController.h"
 
 void UGameplayAbilityBase::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
@@ -22,18 +19,12 @@ UBaseAbilitySystemComponent* UGameplayAbilityBase::GetBaseAbilitySystemComponent
 	return Cast<UBaseAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 }
 
-UPlayerAbilitySystemComponent* UGameplayAbilityBase::GetPlayerAbilitySystemComponentFromActorInfo() const
+AActor* UGameplayAbilityBase::GetAvatarActorFromAbilityActorInfo() const
 {
-	return Cast<UPlayerAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
+	return GetAvatarActorFromActorInfo();
 }
 
-APlayerCharacter* UGameplayAbilityBase::GetPlayerCharacterFromActorInfo() const
+AActor* UGameplayAbilityBase::GetOwnerActorFromAbilityActorInfo() const
 {
-	return Cast<APlayerCharacter>(GetAvatarActorFromActorInfo());
-}
-
-AGamePlayerController* UGameplayAbilityBase::GetGamePlayerControllerFromActorInfo() const
-{
-	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
-	return ActorInfo ? Cast<AGamePlayerController>(ActorInfo->PlayerController.Get()) : nullptr;
+	return GetOwningActorFromActorInfo();
 }

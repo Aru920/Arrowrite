@@ -9,6 +9,7 @@
 
 class UAbilitySystemComponent;
 class UCameraComponent;
+class UCharacterStartupData;
 class UInputComponent;
 class UInputAction;
 class UInputMappingContext;
@@ -40,6 +41,7 @@ protected:
 
 private:
 	void InitAbilityActorInfo();
+	void GiveStartupAbilities();
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void StartSprinting();
@@ -64,6 +66,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> RunAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability System", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCharacterStartupData> CharacterStartupData;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Ability System", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UPlayerAbilitySystemComponent> AbilitySystemComponent;

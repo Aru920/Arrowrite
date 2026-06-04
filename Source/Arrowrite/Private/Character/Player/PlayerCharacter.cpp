@@ -2,6 +2,7 @@
 
 #include "Character/Player/PlayerCharacter.h"
 
+#include "AbilitySystem/Data/CharacterStartupData.h"
 #include "AbilitySystem/Player/PlayerAbilitySystemComponent.h"
 #include "AbilitySystem/Player/PlayerAttributeSet.h"
 #include "Camera/CameraComponent.h"
@@ -88,7 +89,18 @@ void APlayerCharacter::InitAbilityActorInfo()
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(GamePlayerState, this);
+		GiveStartupAbilities();
 	}
+}
+
+void APlayerCharacter::GiveStartupAbilities()
+{
+	if (!HasAuthority() || !AbilitySystemComponent || !CharacterStartupData)
+	{
+		return;
+	}
+
+	CharacterStartupData->GiveToAbilitySystemComponent(AbilitySystemComponent);
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)

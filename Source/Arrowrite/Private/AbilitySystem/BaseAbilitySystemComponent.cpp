@@ -18,9 +18,85 @@ void UBaseAbilitySystemComponent::GiveStartupAbilities(const TArray<TSubclassOf<
 			continue;
 		}
 
+		if (HasAbilityOfClass(AbilityClass))
+		{
+			continue;
+		}
+
 		FGameplayAbilitySpec AbilitySpec(AbilityClass, AbilityLevel);
 		AbilitySpec.SourceObject = GetAvatarActor();
 
+		if (const UGameplayAbilityBase* AbilityCDO = AbilityClass->GetDefaultObject<UGameplayAbilityBase>())
+		{
+			if (AbilityCDO->GetInputTag().IsValid())
+			{
+				AbilitySpec.GetDynamicSpecSourceTags().AddTag(AbilityCDO->GetInputTag());
+			}
+		}
+
 		GiveAbility(AbilitySpec);
 	}
+}
+
+void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
+{
+	if (!InputTag.IsValid())
+	{
+		return;
+	}
+
+	ABILITYLIST_SCOPE_LOCK();
+	for (FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	{
+		if (!AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag))
+		{
+			continue;
+		}
+
+		AbilitySpecInputPressed(AbilitySpec);
+
+		const UGameplayAbilityBase* AbilityCDO = Cast<UGameplayAbilityBase>(AbilitySpec.Ability);
+		if (AbilityCDO && (AbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputTriggered || AbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputHeld))
+		{
+			TryActivateAbility(AbilitySpec.Handle);
+		}
+	}
+}
+
+void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
+{
+	if (!InputTag.IsValid())
+	{
+		return;
+	}
+
+	ABILITYLIST_SCOPE_LOCK();
+	for (FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	{
+		if (!AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag))
+		{
+			continue;
+		}
+
+		AbilitySpecInputReleased(AbilitySpec);
+
+	}
+}
+
+bool UBaseAbilitySystemComponent::HasAbilityOfClass(TSubclassOf<UGameplayAbilityBase> AbilityClass) const
+{
+	if (!AbilityClass)
+	{
+		return false;
+	}
+
+	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	{
+		if (AbilitySpec.Ability && AbilitySpec.Ability->GetClass() == AbilityClass)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
