@@ -1,0 +1,41 @@
+# Unreal Engine generated files
+Binaries/
+Build/
+Content/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Visual Studio / Rider / IDE state
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build output and debug symbols
+*.dll
+*.exe
+*.exp
+*.ilk
+*.lib
+*.obj
+*.pdb
+
+# Unreal local/generated metadata
+*.opensdf
+*.sdf
+*.sln.DotSettings.user
+*.VC.db
+*.VC.opendb
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
