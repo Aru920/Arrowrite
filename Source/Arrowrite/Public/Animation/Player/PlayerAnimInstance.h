@@ -10,4 +10,20 @@ UCLASS()
 class ARROWRITE_API UPlayerAnimInstance : public UBaseAnimInstance
 {
 	GENERATED_BODY()
+
+public:
+	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+
+protected:
+	UPROPERTY(BlueprintReadOnly, Category = "Animation|Bow")
+	bool bIsAiming = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Animation|Bow")
+	float AimYaw = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Animation|Bow")
+	float AimPitch = 0.0f;
+
+private:
+	void UpdateAimValues();
 };

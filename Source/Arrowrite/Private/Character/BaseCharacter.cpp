@@ -9,10 +9,6 @@ ABaseCharacter::ABaseCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
-	bUseControllerRotationRoll = false;
-
 	ApplyMovementSettings();
 }
 
@@ -65,6 +61,4 @@ void ABaseCharacter::ApplyMovementSettings()
 	}
 
 	MovementComponent->MaxWalkSpeed = bIsSprinting ? RunSpeed : WalkSpeed;
-	MovementComponent->bOrientRotationToMovement = true;
-	MovementComponent->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
 }
