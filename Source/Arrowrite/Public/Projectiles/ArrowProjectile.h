@@ -6,8 +6,11 @@
 #include "GameFramework/Actor.h"
 #include "ArrowProjectile.generated.h"
 
+class UProjectileMovementComponent;
+class USceneComponent;
 class UCapsuleComponent;
 class UStaticMeshComponent;
+class UArrowComponent;
 
 UCLASS()
 class ARROWRITE_API AArrowProjectile : public AActor
@@ -17,16 +20,79 @@ class ARROWRITE_API AArrowProjectile : public AActor
 public:
 	AArrowProjectile();
 
+	virtual void Tick(float DeltaSeconds) override;
+
+	UFUNCTION(BlueprintCallable, Category = "Projectile", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	void LaunchArrow(FVector LaunchDirection, float Intensity);
+
 	UFUNCTION(BlueprintPure, Category = "Projectile")
 	UCapsuleComponent* GetCollisionComponent() const { return CollisionComponent; }
 
 	UFUNCTION(BlueprintPure, Category = "Projectile")
 	UStaticMeshComponent* GetArrowMesh() const { return ArrowMesh; }
 
+	UFUNCTION(BlueprintPure, Category = "Projectile")
+	UProjectileMovementComponent* GetProjectileMovement() const { return ProjectileMovement; }
+
+	UFUNCTION(BlueprintPure, Category = "Projectile")
+	UArrowComponent* GetLaunchDirectionArrow() const { return LaunchDirectionArrow; }
+
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
-	TObjectPtr<UCapsuleComponent> CollisionComponent;
+	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	void HandleImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
+
+	UFUNCTION()
+	void HandleProjectileStop(const FHitResult& ImpactResult);
+
+	void ProcessImpact(const FHitResult& Hit);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Projectile")
+	void OnArrowImpact(const FHitResult& Hit);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
+	TObjectPtr<USceneComponent> SceneRoot;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
+	TObjectPtr<USceneComponent> ArrowAlignmentRoot;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
+	TObjectPtr<UCapsuleComponent> CollisionComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<UStaticMeshComponent> ArrowMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile|Debug")
+	TObjectPtr<UArrowComponent> LaunchDirectionArrow;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
+	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
+	bool bDestroyOnImpact = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
+	bool bStickOnImpact = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile", meta = (ClampMin = "0.0"))
+	float StickDepth = 12.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile", meta = (ClampMin = "0.0"))
+	float ImpactLifeSpan = 15.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
+	bool bAlignToVelocity = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Launch", meta = (ClampMin = "0.0"))
+	float MinLaunchSpeed = 700.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Launch", meta = (ClampMin = "0.0"))
+	float MaxLaunchSpeed = 2200.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Launch", meta = (ClampMin = "0.0"))
+	float ArrowGravityScale = 0.8f;
+
+	bool bIsLaunched = false;
+	bool bHasImpacted = false;
 };
