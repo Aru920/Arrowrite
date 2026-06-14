@@ -36,6 +36,9 @@ Config/DefaultEngine.ini
 *.tmp
 *.temp
 
+# Local project planning notes
+ARROWRITE_LOCAL_ROADMAP.md
+
 # OS files
 .DS_Store
 Thumbs.db
