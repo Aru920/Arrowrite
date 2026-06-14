@@ -16,6 +16,9 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void SetAimingRotationMode(bool bIsAiming);
+
 protected:
 	virtual void BeginPlay() override;
 

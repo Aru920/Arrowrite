@@ -27,7 +27,10 @@ AArrowProjectile::AArrowProjectile()
 	CollisionComponent->InitCapsuleSize(5.0f, 45.0f);
 	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	CollisionComponent->SetCollisionObjectType(ECC_WorldDynamic);
-	CollisionComponent->SetCollisionResponseToAllChannels(ECR_Block);
+	CollisionComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	CollisionComponent->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+	CollisionComponent->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+	CollisionComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 	CollisionComponent->SetNotifyRigidBodyCollision(true);
 
 	ArrowMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ArrowMesh"));
@@ -49,6 +52,10 @@ AArrowProjectile::AArrowProjectile()
 	ProjectileMovement->bShouldBounce = false;
 	ProjectileMovement->bInitialVelocityInLocalSpace = false;
 	ProjectileMovement->bAutoActivate = false;
+	ProjectileMovement->bSweepCollision = true;
+	ProjectileMovement->bForceSubStepping = true;
+	ProjectileMovement->MaxSimulationTimeStep = 0.016f;
+	ProjectileMovement->MaxSimulationIterations = 8;
 }
 
 void AArrowProjectile::Tick(float DeltaSeconds)
@@ -87,6 +94,13 @@ void AArrowProjectile::LaunchArrow(FVector LaunchDirection, float Intensity)
 	SetActorTickEnabled(true);
 	SetActorRotation(Direction.Rotation());
 
+	if (CollisionComponent)
+	{
+		CollisionComponent->IgnoreActorWhenMoving(this, true);
+		CollisionComponent->IgnoreActorWhenMoving(GetOwner(), true);
+		CollisionComponent->IgnoreActorWhenMoving(GetInstigator(), true);
+	}
+
 	ProjectileMovement->SetUpdatedComponent(CollisionComponent);
 	ProjectileMovement->ProjectileGravityScale = ArrowGravityScale;
 	ProjectileMovement->InitialSpeed = LaunchSpeed;
@@ -112,12 +126,24 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 		return;
 	}
 
+	if (!Hit.bBlockingHit)
+	{
+		return;
+	}
+
 	if (bHasImpacted)
 	{
 		return;
 	}
 
-	if (Hit.GetActor() == GetOwner() || Hit.GetActor() == GetInstigator())
+	const AActor* HitActor = Hit.GetActor();
+	const UPrimitiveComponent* HitPrimitive = Hit.GetComponent();
+	if (HitActor == this || HitActor == GetOwner() || HitActor == GetInstigator())
+	{
+		return;
+	}
+
+	if (HitPrimitive == CollisionComponent || (HitPrimitive && HitPrimitive->GetOwner() == this))
 	{
 		return;
 	}
@@ -142,9 +168,9 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 		SetActorLocation(Hit.ImpactPoint + ImpactDirection * StickDepth);
 		SetActorRotation(ImpactDirection.Rotation());
 
-		if (UPrimitiveComponent* HitPrimitive = Hit.GetComponent())
+		if (UPrimitiveComponent* BlockingPrimitive = Hit.GetComponent())
 		{
-			AttachToComponent(HitPrimitive, FAttachmentTransformRules::KeepWorldTransform);
+			AttachToComponent(BlockingPrimitive, FAttachmentTransformRules::KeepWorldTransform);
 		}
 
 		if (ImpactLifeSpan > 0.0f)

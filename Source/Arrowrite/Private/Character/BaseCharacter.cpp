@@ -26,6 +26,19 @@ void ABaseCharacter::BeginPlay()
 	ApplyMovementSettings();
 }
 
+void ABaseCharacter::SetAimingRotationMode(bool bIsAiming)
+{
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if (!MovementComponent)
+	{
+		return;
+	}
+
+	bUseControllerRotationYaw = bIsAiming;
+	MovementComponent->bUseControllerDesiredRotation = !bIsAiming;
+	MovementComponent->bOrientRotationToMovement = !bIsAiming;
+}
+
 void ABaseCharacter::SetSprinting(bool bNewIsSprinting)
 {
 	if (bIsSprinting == bNewIsSprinting)

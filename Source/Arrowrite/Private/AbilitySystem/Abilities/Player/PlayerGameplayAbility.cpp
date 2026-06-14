@@ -6,6 +6,8 @@
 #include "Character/Player/PlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Player/GamePlayerController.h"
+#include "Player/PlayerEquipmentComponent.h"
+#include "Weapons/BaseWeapon.h"
 
 UPlayerAbilitySystemComponent* UPlayerGameplayAbility::GetPlayerAbilitySystemComponentFromActorInfo() const
 {
@@ -27,4 +29,16 @@ USkeletalMeshComponent* UPlayerGameplayAbility::GetPlayerMeshFromActorInfo() con
 {
 	const APlayerCharacter* PlayerCharacter = GetPlayerCharacterFromActorInfo();
 	return PlayerCharacter ? PlayerCharacter->GetMesh() : nullptr;
+}
+
+UPlayerEquipmentComponent* UPlayerGameplayAbility::GetPlayerEquipmentComponentFromActorInfo() const
+{
+	const APlayerCharacter* PlayerCharacter = GetPlayerCharacterFromActorInfo();
+	return PlayerCharacter ? PlayerCharacter->GetEquipmentComponent() : nullptr;
+}
+
+ABaseWeapon* UPlayerGameplayAbility::GetCurrentWeaponFromActorInfo() const
+{
+	const UPlayerEquipmentComponent* EquipmentComponent = GetPlayerEquipmentComponentFromActorInfo();
+	return EquipmentComponent ? EquipmentComponent->GetCurrentWeapon() : nullptr;
 }

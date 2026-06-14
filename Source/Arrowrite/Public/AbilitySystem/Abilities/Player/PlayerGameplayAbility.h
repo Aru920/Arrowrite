@@ -8,7 +8,9 @@
 
 class AGamePlayerController;
 class APlayerCharacter;
+class ABaseWeapon;
 class UPlayerAbilitySystemComponent;
+class UPlayerEquipmentComponent;
 class USkeletalMeshComponent;
 
 UCLASS()
@@ -28,4 +30,10 @@ protected:
 
 	UFUNCTION(BlueprintPure, Category = "Ability|Player")
 	USkeletalMeshComponent* GetPlayerMeshFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "Ability|Player")
+	UPlayerEquipmentComponent* GetPlayerEquipmentComponentFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "Ability|Player")
+	ABaseWeapon* GetCurrentWeaponFromActorInfo() const;
 };
