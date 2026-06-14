@@ -15,6 +15,11 @@ void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	UpdateAimValues();
 }
 
+void UPlayerAnimInstance::SetBowAimPoseActive(bool bShouldUseBowAimPose)
+{
+	bUseBowAimPose = bShouldUseBowAimPose;
+}
+
 void UPlayerAnimInstance::UpdateAimValues()
 {
 	bIsAiming = false;

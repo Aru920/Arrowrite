@@ -31,6 +31,7 @@ public:
 
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	UFUNCTION(BlueprintPure, Category = "Ability System")
@@ -48,12 +49,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void RemoveInputMappingContext(UInputMappingContext* MappingContext);
 
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void SetBowAimPoseActive(bool bShouldUseBowAimPose);
+
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 private:
 	void AddInputMappingContextLocal(UInputMappingContext* MappingContext, int32 Priority) const;
 	void RemoveInputMappingContextLocal(UInputMappingContext* MappingContext) const;
+	void ApplyBowAimPoseActive();
 	void InitAbilityActorInfo();
 	void GiveStartupAbilities();
 	void Move(const FInputActionValue& Value);
@@ -69,6 +74,12 @@ private:
 
 	UFUNCTION(Client, Reliable)
 	void ClientRemoveInputMappingContext(UInputMappingContext* MappingContext);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetBowAimPoseActive(bool bShouldUseBowAimPose);
+
+	UFUNCTION()
+	void OnRep_BowAimPoseActive();
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -103,4 +114,7 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Ability System", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UPlayerAttributeSet> AttributeSet;
+
+	UPROPERTY(ReplicatedUsing = OnRep_BowAimPoseActive, BlueprintReadOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	bool bBowAimPoseActive = false;
 };

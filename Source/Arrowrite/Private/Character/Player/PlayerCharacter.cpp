@@ -5,6 +5,7 @@
 #include "AbilitySystem/Data/CharacterStartupData.h"
 #include "AbilitySystem/Player/PlayerAbilitySystemComponent.h"
 #include "AbilitySystem/Player/PlayerAttributeSet.h"
+#include "Animation/Player/PlayerAnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -13,6 +14,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Input/InputConfigDataAsset.h"
 #include "InputActionValue.h"
+#include "Net/UnrealNetwork.h"
 #include "Player/PlayerEquipmentComponent.h"
 #include "Player/GamePlayerState.h"
 
@@ -42,6 +44,13 @@ void APlayerCharacter::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	InitAbilityActorInfo();
+}
+
+void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(APlayerCharacter, bBowAimPoseActive);
 }
 
 UAbilitySystemComponent* APlayerCharacter::GetAbilitySystemComponent() const
@@ -84,6 +93,31 @@ void APlayerCharacter::RemoveInputMappingContext(UInputMappingContext* MappingCo
 	if (HasAuthority())
 	{
 		ClientRemoveInputMappingContext(MappingContext);
+	}
+}
+
+void APlayerCharacter::SetBowAimPoseActive(bool bShouldUseBowAimPose)
+{
+	if (bBowAimPoseActive == bShouldUseBowAimPose)
+	{
+		ApplyBowAimPoseActive();
+		return;
+	}
+
+	bBowAimPoseActive = bShouldUseBowAimPose;
+	ApplyBowAimPoseActive();
+
+	if (!HasAuthority())
+	{
+		ServerSetBowAimPoseActive(bShouldUseBowAimPose);
+	}
+}
+
+void APlayerCharacter::ApplyBowAimPoseActive()
+{
+	if (UPlayerAnimInstance* PlayerAnimInstance = Cast<UPlayerAnimInstance>(GetMesh() ? GetMesh()->GetAnimInstance() : nullptr))
+	{
+		PlayerAnimInstance->SetBowAimPoseActive(bBowAimPoseActive);
 	}
 }
 
@@ -271,4 +305,14 @@ void APlayerCharacter::ClientAddInputMappingContext_Implementation(UInputMapping
 void APlayerCharacter::ClientRemoveInputMappingContext_Implementation(UInputMappingContext* MappingContext)
 {
 	RemoveInputMappingContextLocal(MappingContext);
+}
+
+void APlayerCharacter::ServerSetBowAimPoseActive_Implementation(bool bShouldUseBowAimPose)
+{
+	SetBowAimPoseActive(bShouldUseBowAimPose);
+}
+
+void APlayerCharacter::OnRep_BowAimPoseActive()
+{
+	ApplyBowAimPoseActive();
 }

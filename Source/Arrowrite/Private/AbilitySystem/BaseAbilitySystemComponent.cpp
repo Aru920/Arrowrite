@@ -61,6 +61,11 @@ void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
 
 		AbilitySpecInputPressed(AbilitySpec);
 
+		if (AbilitySpec.IsActive())
+		{
+			continue;
+		}
+
 		const UGameplayAbilityBase* AbilityCDO = Cast<UGameplayAbilityBase>(AbilitySpec.Ability);
 		if (AbilityCDO && (AbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputTriggered || AbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputHeld))
 		{

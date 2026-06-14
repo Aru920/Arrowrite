@@ -14,9 +14,15 @@ class ARROWRITE_API UPlayerAnimInstance : public UBaseAnimInstance
 public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
+	UFUNCTION(BlueprintCallable, Category = "Animation|Bow")
+	void SetBowAimPoseActive(bool bShouldUseBowAimPose);
+
 protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Animation|Bow")
 	bool bIsAiming = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Animation|Bow")
+	bool bUseBowAimPose = false;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Animation|Bow")
 	float AimYaw = 0.0f;
