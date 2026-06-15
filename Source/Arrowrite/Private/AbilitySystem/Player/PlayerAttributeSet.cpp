@@ -9,6 +9,7 @@ UPlayerAttributeSet::UPlayerAttributeSet()
 {
 	InitMaxHealth(100.0f);
 	InitHealth(100.0f);
+	InitDamageTaken(0.0f);
 }
 
 void UPlayerAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -41,6 +42,16 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 	{
 		SetMaxHealth(FMath::Max(GetMaxHealth(), 1.0f));
 		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
+	}
+	else if (Data.EvaluatedData.Attribute == GetDamageTakenAttribute())
+	{
+		const float DamageDone = GetDamageTaken();
+		SetDamageTaken(0.0f);
+
+		if (DamageDone > 0.0f)
+		{
+			SetHealth(FMath::Clamp(GetHealth() - DamageDone, 0.0f, GetMaxHealth()));
+		}
 	}
 }
 

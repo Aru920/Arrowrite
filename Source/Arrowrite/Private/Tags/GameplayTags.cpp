@@ -20,5 +20,7 @@ namespace ArrowriteGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Bow_SpawnArrow, "Event.Bow.SpawnArrow", "Gameplay event sent when the fired arrow should spawn and launch.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Bow_ReloadArrow, "Event.Bow.ReloadArrow", "Gameplay event sent when the next preview arrow should be shown on the bow.");
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Shared_SetByCaller_BaseDamage, "Shared.SetByCaller.BaseDamage", "Set-by-caller magnitude for base damage.");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Weapon_Bow, "Weapon.Bow", "Weapon tag for bow equipment.");
 }
