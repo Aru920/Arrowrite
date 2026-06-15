@@ -8,6 +8,7 @@
 
 class UBaseAbilitySystemComponent;
 class UGameplayAbilityBase;
+class UGameplayEffect;
 
 UCLASS()
 class ARROWRITE_API UCharacterStartupData : public UDataAsset
@@ -20,4 +21,7 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TArray<TSubclassOf<UGameplayAbilityBase>> StartupAbilities;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gameplay Effects")
+	TArray<TSubclassOf<UGameplayEffect>> StartupGameplayEffects;
 };
