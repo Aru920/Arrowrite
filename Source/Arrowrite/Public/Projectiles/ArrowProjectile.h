@@ -58,7 +58,8 @@ protected:
 	void TraceForImpact();
 	void StopProjectileMovement();
 	void StickArrowToImpact(const FHitResult& Hit, const FVector& ImpactDirection);
-	void ApplyDamageToHitActor(const FHitResult& Hit);
+	bool ApplyDamageToHitActor(const FHitResult& Hit);
+	void SendHitReactEvent(const FHitResult& Hit) const;
 	void ConfigureProjectileCollision() const;
 	bool TryResolveCharacterMeshHit(const FHitResult& Hit, FHitResult& ResolvedHit) const;
 	void AddImpactIgnoredActor(AActor* ActorToIgnore);

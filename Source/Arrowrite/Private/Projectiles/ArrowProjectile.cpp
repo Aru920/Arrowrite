@@ -220,7 +220,10 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 		: GetActorForwardVector();
 
 	MulticastStickArrow(ImpactHit, ImpactDirection);
-	ApplyDamageToHitActor(ImpactHit);
+	if (ApplyDamageToHitActor(ImpactHit))
+	{
+		SendHitReactEvent(ImpactHit);
+	}
 }
 
 void AArrowProjectile::MulticastStickArrow_Implementation(const FHitResult& Hit, FVector_NetQuantizeNormal ImpactDirection)
@@ -283,23 +286,23 @@ FVector AArrowProjectile::GetArrowTipWorldLocation() const
 	return CollisionComponent ? CollisionComponent->GetComponentLocation() : GetActorLocation();
 }
 
-void AArrowProjectile::ApplyDamageToHitActor(const FHitResult& Hit)
+bool AArrowProjectile::ApplyDamageToHitActor(const FHitResult& Hit)
 {
 	if (!HasAuthority() || !DamageEffectClass)
 	{
-		return;
+		return false;
 	}
 
 	AActor* HitActor = Hit.GetActor();
 	if (ShouldIgnoreImpactActor(HitActor))
 	{
-		return;
+		return false;
 	}
 
 	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
 	if (!TargetASC)
 	{
-		return;
+		return false;
 	}
 
 	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetInstigator());
@@ -320,7 +323,7 @@ void AArrowProjectile::ApplyDamageToHitActor(const FHitResult& Hit)
 	}
 	if (!SourceASC)
 	{
-		return;
+		return false;
 	}
 
 	FGameplayEffectContextHandle EffectContext = SourceASC->MakeEffectContext();
@@ -331,13 +334,40 @@ void AArrowProjectile::ApplyDamageToHitActor(const FHitResult& Hit)
 	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, DamageLevel, EffectContext);
 	if (!SpecHandle.IsValid())
 	{
-		return;
+		return false;
 	}
 
 	const float Damage = BaseDamage.GetValueAtLevel(DamageLevel);
 	SpecHandle.Data->SetSetByCallerMagnitude(ArrowriteGameplayTags::Shared_SetByCaller_BaseDamage, Damage);
 
-	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+	const FActiveGameplayEffectHandle ActiveEffectHandle = SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+	return ActiveEffectHandle.WasSuccessfullyApplied();
+}
+
+void AArrowProjectile::SendHitReactEvent(const FHitResult& Hit) const
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AActor* HitActor = Hit.GetActor();
+	if (!HitActor || ShouldIgnoreImpactActor(HitActor))
+	{
+		return;
+	}
+
+	FGameplayEventData EventData;
+	EventData.EventTag = ArrowriteGameplayTags::Event_Player_HitReact;
+	EventData.Instigator = GetInstigator() ? GetInstigator() : GetOwner();
+	EventData.Target = HitActor;
+	EventData.OptionalObject = this;
+	EventData.ContextHandle.AddHitResult(Hit);
+
+	if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor))
+	{
+		TargetASC->HandleGameplayEvent(ArrowriteGameplayTags::Event_Player_HitReact, &EventData);
+	}
 }
 
 void AArrowProjectile::ConfigureProjectileCollision() const

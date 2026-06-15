@@ -2,8 +2,10 @@
 
 #include "AbilitySystem/Player/PlayerAttributeSet.h"
 
+#include "AbilitySystemComponent.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
+#include "Tags/GameplayTags.h"
 
 UPlayerAttributeSet::UPlayerAttributeSet()
 {
@@ -34,9 +36,23 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 {
 	Super::PostGameplayEffectExecute(Data);
 
+	const auto AddDeadTagIfHealthDepleted = [this]()
+	{
+		if (GetHealth() > 0.0f)
+		{
+			return;
+		}
+
+		if (UAbilitySystemComponent* OwningASC = GetOwningAbilitySystemComponent())
+		{
+			OwningASC->AddLooseGameplayTag(ArrowriteGameplayTags::State_Dead);
+		}
+	};
+
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
 		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
+		AddDeadTagIfHealthDepleted();
 	}
 	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
 	{
@@ -51,6 +67,7 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 		if (DamageDone > 0.0f)
 		{
 			SetHealth(FMath::Clamp(GetHealth() - DamageDone, 0.0f, GetMaxHealth()));
+			AddDeadTagIfHealthDepleted();
 		}
 	}
 }

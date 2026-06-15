@@ -55,6 +55,14 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 UAbilitySystemComponent* APlayerCharacter::GetAbilitySystemComponent() const
 {
+	if (!AbilitySystemComponent)
+	{
+		if (const AGamePlayerState* GamePlayerState = GetPlayerState<AGamePlayerState>())
+		{
+			return GamePlayerState->GetPlayerAbilitySystemComponent();
+		}
+	}
+
 	return AbilitySystemComponent;
 }
 
