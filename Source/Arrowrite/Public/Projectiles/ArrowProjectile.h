@@ -25,6 +25,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Projectile", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	void LaunchArrow(FVector LaunchDirection, float Intensity);
 
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	void SetImpactIgnoredActor(AActor* ActorToIgnore);
+
 	UFUNCTION(BlueprintPure, Category = "Projectile")
 	UCapsuleComponent* GetCollisionComponent() const { return CollisionComponent; }
 
@@ -47,6 +50,10 @@ protected:
 	void HandleProjectileStop(const FHitResult& ImpactResult);
 
 	void ProcessImpact(const FHitResult& Hit);
+	void TraceForImpact();
+	void StickArrowToImpact(const FHitResult& Hit, const FVector& ImpactDirection);
+	FVector GetArrowTipWorldLocation() const;
+	bool ShouldIgnoreImpactActor(const AActor* HitActor) const;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Projectile")
 	void OnArrowImpact(const FHitResult& Hit);
@@ -69,16 +76,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
-	bool bDestroyOnImpact = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Impact")
+	FName ArrowTipSocketName = TEXT("ArrowTip");
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
-	bool bStickOnImpact = true;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Impact", meta = (ClampMin = "0.0"))
+	float StickDepth = 3.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile", meta = (ClampMin = "0.0"))
-	float StickDepth = 12.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Impact", meta = (ClampMin = "0.0"))
 	float ImpactLifeSpan = 15.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
@@ -95,4 +99,7 @@ protected:
 
 	bool bIsLaunched = false;
 	bool bHasImpacted = false;
+	bool bHasLastTraceLocation = false;
+	FVector LastTraceLocation = FVector::ZeroVector;
+	TWeakObjectPtr<AActor> ImpactIgnoredActor;
 };

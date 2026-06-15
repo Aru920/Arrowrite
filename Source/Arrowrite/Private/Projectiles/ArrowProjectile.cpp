@@ -6,7 +6,13 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+
+namespace
+{
+	constexpr ECollisionChannel ArrowTraceChannel = ECC_GameTraceChannel1;
+}
 
 AArrowProjectile::AArrowProjectile()
 {
@@ -67,6 +73,13 @@ void AArrowProjectile::Tick(float DeltaSeconds)
 		return;
 	}
 
+	TraceForImpact();
+
+	if (bHasImpacted)
+	{
+		return;
+	}
+
 	SetActorRotation(ProjectileMovement->Velocity.GetSafeNormal().Rotation());
 }
 
@@ -91,6 +104,8 @@ void AArrowProjectile::LaunchArrow(FVector LaunchDirection, float Intensity)
 
 	bIsLaunched = true;
 	bHasImpacted = false;
+	bHasLastTraceLocation = true;
+	LastTraceLocation = GetArrowTipWorldLocation();
 	SetActorTickEnabled(true);
 	SetActorRotation(Direction.Rotation());
 
@@ -99,6 +114,7 @@ void AArrowProjectile::LaunchArrow(FVector LaunchDirection, float Intensity)
 		CollisionComponent->IgnoreActorWhenMoving(this, true);
 		CollisionComponent->IgnoreActorWhenMoving(GetOwner(), true);
 		CollisionComponent->IgnoreActorWhenMoving(GetInstigator(), true);
+		CollisionComponent->IgnoreActorWhenMoving(ImpactIgnoredActor.Get(), true);
 	}
 
 	ProjectileMovement->SetUpdatedComponent(CollisionComponent);
@@ -117,6 +133,40 @@ void AArrowProjectile::HandleImpact(UPrimitiveComponent* HitComponent, AActor* O
 void AArrowProjectile::HandleProjectileStop(const FHitResult& ImpactResult)
 {
 	ProcessImpact(ImpactResult);
+}
+
+void AArrowProjectile::TraceForImpact()
+{
+	if (!HasAuthority() || !CollisionComponent)
+	{
+		return;
+	}
+
+	const FVector CurrentTraceLocation = GetArrowTipWorldLocation();
+	if (!bHasLastTraceLocation)
+	{
+		LastTraceLocation = CurrentTraceLocation;
+		bHasLastTraceLocation = true;
+		return;
+	}
+
+	if (LastTraceLocation.Equals(CurrentTraceLocation, KINDA_SMALL_NUMBER))
+	{
+		return;
+	}
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(ArrowProjectileTrace), false, this);
+	QueryParams.AddIgnoredActor(GetOwner());
+	QueryParams.AddIgnoredActor(GetInstigator());
+	QueryParams.AddIgnoredActor(ImpactIgnoredActor.Get());
+
+	FHitResult Hit;
+	if (GetWorld()->LineTraceSingleByChannel(Hit, LastTraceLocation, CurrentTraceLocation, ArrowTraceChannel, QueryParams))
+	{
+		ProcessImpact(Hit);
+	}
+
+	LastTraceLocation = CurrentTraceLocation;
 }
 
 void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
@@ -138,7 +188,7 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 
 	const AActor* HitActor = Hit.GetActor();
 	const UPrimitiveComponent* HitPrimitive = Hit.GetComponent();
-	if (HitActor == this || HitActor == GetOwner() || HitActor == GetInstigator())
+	if (ShouldIgnoreImpactActor(HitActor))
 	{
 		return;
 	}
@@ -162,27 +212,62 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 
 	SetActorTickEnabled(false);
 
-	if (bStickOnImpact)
-	{
-		CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		SetActorLocation(Hit.ImpactPoint + ImpactDirection * StickDepth);
-		SetActorRotation(ImpactDirection.Rotation());
-
-		if (UPrimitiveComponent* BlockingPrimitive = Hit.GetComponent())
-		{
-			AttachToComponent(BlockingPrimitive, FAttachmentTransformRules::KeepWorldTransform);
-		}
-
-		if (ImpactLifeSpan > 0.0f)
-		{
-			SetLifeSpan(ImpactLifeSpan);
-		}
-	}
+	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	StickArrowToImpact(Hit, ImpactDirection);
 
 	OnArrowImpact(Hit);
+}
 
-	if (bDestroyOnImpact)
+void AArrowProjectile::StickArrowToImpact(const FHitResult& Hit, const FVector& ImpactDirection)
+{
+	const FVector ImpactPoint = Hit.ImpactPoint.IsNearlyZero() ? Hit.Location : Hit.ImpactPoint;
+	const FVector DesiredTipLocation = ImpactPoint + ImpactDirection.GetSafeNormal() * StickDepth;
+
+	SetActorRotation(ImpactDirection.Rotation());
+
+	const FVector CurrentTipLocation = GetArrowTipWorldLocation();
+	SetActorLocation(GetActorLocation() + (DesiredTipLocation - CurrentTipLocation));
+
+	if (UPrimitiveComponent* HitPrimitive = Hit.GetComponent())
 	{
-		Destroy();
+		AttachToComponent(HitPrimitive, FAttachmentTransformRules::KeepWorldTransform, Hit.BoneName);
 	}
+
+	if (ImpactLifeSpan > 0.0f)
+	{
+		SetLifeSpan(ImpactLifeSpan);
+	}
+}
+
+FVector AArrowProjectile::GetArrowTipWorldLocation() const
+{
+	if (ArrowMesh && ArrowMesh->DoesSocketExist(ArrowTipSocketName))
+	{
+		return ArrowMesh->GetSocketLocation(ArrowTipSocketName);
+	}
+
+	return CollisionComponent ? CollisionComponent->GetComponentLocation() : GetActorLocation();
+}
+
+void AArrowProjectile::SetImpactIgnoredActor(AActor* ActorToIgnore)
+{
+	ImpactIgnoredActor = ActorToIgnore;
+
+	if (CollisionComponent)
+	{
+		CollisionComponent->IgnoreActorWhenMoving(ActorToIgnore, true);
+	}
+}
+
+bool AArrowProjectile::ShouldIgnoreImpactActor(const AActor* HitActor) const
+{
+	if (!HitActor)
+	{
+		return true;
+	}
+
+	return HitActor == this
+		|| HitActor == GetOwner()
+		|| HitActor == GetInstigator()
+		|| HitActor == ImpactIgnoredActor.Get();
 }
