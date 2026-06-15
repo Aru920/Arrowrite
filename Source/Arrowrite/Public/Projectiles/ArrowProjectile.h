@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "ScalableFloat.h"
 #include "ArrowProjectile.generated.h"
 
 class UProjectileMovementComponent;
@@ -11,6 +12,7 @@ class USceneComponent;
 class UCapsuleComponent;
 class UStaticMeshComponent;
 class UArrowComponent;
+class UGameplayEffect;
 
 UCLASS()
 class ARROWRITE_API AArrowProjectile : public AActor
@@ -49,9 +51,18 @@ protected:
 	UFUNCTION()
 	void HandleProjectileStop(const FHitResult& ImpactResult);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastStickArrow(const FHitResult& Hit, FVector_NetQuantizeNormal ImpactDirection);
+
 	void ProcessImpact(const FHitResult& Hit);
 	void TraceForImpact();
+	void StopProjectileMovement();
 	void StickArrowToImpact(const FHitResult& Hit, const FVector& ImpactDirection);
+	void ApplyDamageToHitActor(const FHitResult& Hit);
+	void ConfigureProjectileCollision() const;
+	bool TryResolveCharacterMeshHit(const FHitResult& Hit, FHitResult& ResolvedHit) const;
+	void AddImpactIgnoredActor(AActor* ActorToIgnore);
+	void CollectInitialIgnoredActors();
 	FVector GetArrowTipWorldLocation() const;
 	bool ShouldIgnoreImpactActor(const AActor* HitActor) const;
 
@@ -85,6 +96,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Impact", meta = (ClampMin = "0.0"))
 	float ImpactLifeSpan = 15.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Impact", meta = (ClampMin = "0.0"))
+	float InitialShooterIgnoreRadius = 160.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Damage")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Damage")
+	FScalableFloat BaseDamage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Damage", meta = (ClampMin = "1.0"))
+	float DamageLevel = 1.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
 	bool bAlignToVelocity = true;
 
@@ -101,5 +124,5 @@ protected:
 	bool bHasImpacted = false;
 	bool bHasLastTraceLocation = false;
 	FVector LastTraceLocation = FVector::ZeroVector;
-	TWeakObjectPtr<AActor> ImpactIgnoredActor;
+	TArray<TWeakObjectPtr<AActor>> ImpactIgnoredActors;
 };

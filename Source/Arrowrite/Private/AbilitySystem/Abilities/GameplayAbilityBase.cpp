@@ -28,3 +28,9 @@ AActor* UGameplayAbilityBase::GetOwnerActorFromAbilityActorInfo() const
 {
 	return GetOwningActorFromActorInfo();
 }
+
+bool UGameplayAbilityBase::IsAvatarActorAuthority() const
+{
+	const AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	return AvatarActor && AvatarActor->HasAuthority();
+}

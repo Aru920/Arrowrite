@@ -38,6 +38,9 @@ protected:
 	UFUNCTION(BlueprintPure, Category = "Ability")
 	AActor* GetOwnerActorFromAbilityActorInfo() const;
 
+	UFUNCTION(BlueprintPure, Category = "Ability")
+	bool IsAvatarActorAuthority() const;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability")
 	EAbilityActivationPolicy ActivationPolicy = EAbilityActivationPolicy::OnInputTriggered;
 

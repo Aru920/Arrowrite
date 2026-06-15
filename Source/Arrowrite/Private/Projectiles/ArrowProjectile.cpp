@@ -2,12 +2,18 @@
 
 #include "Projectiles/ArrowProjectile.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "GameFramework/Character.h"
+#include "GameplayEffect.h"
+#include "Engine/OverlapResult.h"
+#include "Tags/GameplayTags.h"
 
 namespace
 {
@@ -36,7 +42,7 @@ AArrowProjectile::AArrowProjectile()
 	CollisionComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
 	CollisionComponent->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 	CollisionComponent->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
-	CollisionComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	CollisionComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	CollisionComponent->SetNotifyRigidBodyCollision(true);
 
 	ArrowMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ArrowMesh"));
@@ -87,6 +93,8 @@ void AArrowProjectile::BeginPlay()
 {
 	Super::BeginPlay();
 
+	ConfigureProjectileCollision();
+
 	CollisionComponent->OnComponentHit.AddDynamic(this, &ThisClass::HandleImpact);
 	ProjectileMovement->OnProjectileStop.AddDynamic(this, &ThisClass::HandleProjectileStop);
 }
@@ -106,15 +114,18 @@ void AArrowProjectile::LaunchArrow(FVector LaunchDirection, float Intensity)
 	bHasImpacted = false;
 	bHasLastTraceLocation = true;
 	LastTraceLocation = GetArrowTipWorldLocation();
+	CollectInitialIgnoredActors();
 	SetActorTickEnabled(true);
 	SetActorRotation(Direction.Rotation());
 
 	if (CollisionComponent)
 	{
+		ConfigureProjectileCollision();
 		CollisionComponent->IgnoreActorWhenMoving(this, true);
-		CollisionComponent->IgnoreActorWhenMoving(GetOwner(), true);
-		CollisionComponent->IgnoreActorWhenMoving(GetInstigator(), true);
-		CollisionComponent->IgnoreActorWhenMoving(ImpactIgnoredActor.Get(), true);
+		for (const TWeakObjectPtr<AActor>& IgnoredActor : ImpactIgnoredActors)
+		{
+			CollisionComponent->IgnoreActorWhenMoving(IgnoredActor.Get(), true);
+		}
 	}
 
 	ProjectileMovement->SetUpdatedComponent(CollisionComponent);
@@ -156,9 +167,10 @@ void AArrowProjectile::TraceForImpact()
 	}
 
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(ArrowProjectileTrace), false, this);
-	QueryParams.AddIgnoredActor(GetOwner());
-	QueryParams.AddIgnoredActor(GetInstigator());
-	QueryParams.AddIgnoredActor(ImpactIgnoredActor.Get());
+	for (const TWeakObjectPtr<AActor>& IgnoredActor : ImpactIgnoredActors)
+	{
+		QueryParams.AddIgnoredActor(IgnoredActor.Get());
+	}
 
 	FHitResult Hit;
 	if (GetWorld()->LineTraceSingleByChannel(Hit, LastTraceLocation, CurrentTraceLocation, ArrowTraceChannel, QueryParams))
@@ -186,8 +198,11 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 		return;
 	}
 
-	const AActor* HitActor = Hit.GetActor();
-	const UPrimitiveComponent* HitPrimitive = Hit.GetComponent();
+	FHitResult ImpactHit = Hit;
+	TryResolveCharacterMeshHit(Hit, ImpactHit);
+
+	const AActor* HitActor = ImpactHit.GetActor();
+	const UPrimitiveComponent* HitPrimitive = ImpactHit.GetComponent();
 	if (ShouldIgnoreImpactActor(HitActor))
 	{
 		return;
@@ -204,18 +219,37 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 		? ProjectileMovement->Velocity.GetSafeNormal()
 		: GetActorForwardVector();
 
+	MulticastStickArrow(ImpactHit, ImpactDirection);
+	ApplyDamageToHitActor(ImpactHit);
+}
+
+void AArrowProjectile::MulticastStickArrow_Implementation(const FHitResult& Hit, FVector_NetQuantizeNormal ImpactDirection)
+{
+	bHasImpacted = true;
+	StopProjectileMovement();
+
+	if (CollisionComponent)
+	{
+		CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	StickArrowToImpact(Hit, FVector(ImpactDirection));
+	SetReplicateMovement(false);
+	OnArrowImpact(Hit);
+}
+
+void AArrowProjectile::StopProjectileMovement()
+{
 	if (ProjectileMovement)
 	{
 		ProjectileMovement->StopMovementImmediately();
 		ProjectileMovement->Deactivate();
+		ProjectileMovement->SetComponentTickEnabled(false);
+		ProjectileMovement->Velocity = FVector::ZeroVector;
+		ProjectileMovement->SetUpdatedComponent(nullptr);
 	}
 
 	SetActorTickEnabled(false);
-
-	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	StickArrowToImpact(Hit, ImpactDirection);
-
-	OnArrowImpact(Hit);
 }
 
 void AArrowProjectile::StickArrowToImpact(const FHitResult& Hit, const FVector& ImpactDirection)
@@ -249,13 +283,171 @@ FVector AArrowProjectile::GetArrowTipWorldLocation() const
 	return CollisionComponent ? CollisionComponent->GetComponentLocation() : GetActorLocation();
 }
 
+void AArrowProjectile::ApplyDamageToHitActor(const FHitResult& Hit)
+{
+	if (!HasAuthority() || !DamageEffectClass)
+	{
+		return;
+	}
+
+	AActor* HitActor = Hit.GetActor();
+	if (ShouldIgnoreImpactActor(HitActor))
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+	if (!TargetASC)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetInstigator());
+	if (!SourceASC)
+	{
+		SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetOwner());
+	}
+	if (!SourceASC)
+	{
+		for (const TWeakObjectPtr<AActor>& IgnoredActor : ImpactIgnoredActors)
+		{
+			SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(IgnoredActor.Get());
+			if (SourceASC)
+			{
+				break;
+			}
+		}
+	}
+	if (!SourceASC)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle EffectContext = SourceASC->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+	EffectContext.AddInstigator(GetInstigator(), this);
+	EffectContext.AddHitResult(Hit);
+
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, DamageLevel, EffectContext);
+	if (!SpecHandle.IsValid())
+	{
+		return;
+	}
+
+	const float Damage = BaseDamage.GetValueAtLevel(DamageLevel);
+	SpecHandle.Data->SetSetByCallerMagnitude(ArrowriteGameplayTags::Shared_SetByCaller_BaseDamage, Damage);
+
+	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+}
+
+void AArrowProjectile::ConfigureProjectileCollision() const
+{
+	if (!CollisionComponent)
+	{
+		return;
+	}
+
+	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	CollisionComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+}
+
+bool AArrowProjectile::TryResolveCharacterMeshHit(const FHitResult& Hit, FHitResult& ResolvedHit) const
+{
+	const UCapsuleComponent* HitCapsule = Cast<UCapsuleComponent>(Hit.GetComponent());
+	const ACharacter* HitCharacter = Cast<ACharacter>(Hit.GetActor());
+	if (!HitCapsule || !HitCharacter || HitCapsule != HitCharacter->GetCapsuleComponent())
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* CharacterMesh = HitCharacter->GetMesh();
+	if (!CharacterMesh)
+	{
+		return false;
+	}
+
+	const FVector TraceStart = Hit.TraceStart.IsNearlyZero() ? LastTraceLocation : FVector(Hit.TraceStart);
+	const FVector TraceEnd = Hit.TraceEnd.IsNearlyZero() ? GetArrowTipWorldLocation() : FVector(Hit.TraceEnd);
+	if (TraceStart.Equals(TraceEnd, KINDA_SMALL_NUMBER))
+	{
+		return false;
+	}
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(ArrowProjectileCharacterMeshTrace), false, this);
+	QueryParams.bReturnPhysicalMaterial = true;
+
+	FHitResult MeshHit;
+	if (!CharacterMesh->LineTraceComponent(MeshHit, TraceStart, TraceEnd, QueryParams))
+	{
+		return false;
+	}
+
+	MeshHit.HitObjectHandle = Hit.HitObjectHandle;
+	MeshHit.Component = CharacterMesh;
+	MeshHit.TraceStart = Hit.TraceStart;
+	MeshHit.TraceEnd = Hit.TraceEnd;
+	ResolvedHit = MeshHit;
+	return true;
+}
+
 void AArrowProjectile::SetImpactIgnoredActor(AActor* ActorToIgnore)
 {
-	ImpactIgnoredActor = ActorToIgnore;
+	AddImpactIgnoredActor(ActorToIgnore);
+}
+
+void AArrowProjectile::AddImpactIgnoredActor(AActor* ActorToIgnore)
+{
+	if (!ActorToIgnore || ActorToIgnore == this)
+	{
+		return;
+	}
+
+	for (const TWeakObjectPtr<AActor>& IgnoredActor : ImpactIgnoredActors)
+	{
+		if (IgnoredActor.Get() == ActorToIgnore)
+		{
+			return;
+		}
+	}
+
+	ImpactIgnoredActors.Add(ActorToIgnore);
 
 	if (CollisionComponent)
 	{
 		CollisionComponent->IgnoreActorWhenMoving(ActorToIgnore, true);
+	}
+}
+
+void AArrowProjectile::CollectInitialIgnoredActors()
+{
+	AddImpactIgnoredActor(GetOwner());
+	AddImpactIgnoredActor(GetInstigator());
+
+	UWorld* World = GetWorld();
+	if (!World || InitialShooterIgnoreRadius <= 0.0f)
+	{
+		return;
+	}
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(ArrowProjectileInitialIgnore), false, this);
+	TArray<FOverlapResult> OverlapResults;
+	const bool bHasOverlaps = World->OverlapMultiByObjectType(
+		OverlapResults,
+		GetActorLocation(),
+		FQuat::Identity,
+		FCollisionObjectQueryParams(ECC_Pawn),
+		FCollisionShape::MakeSphere(InitialShooterIgnoreRadius),
+		QueryParams
+	);
+
+	if (!bHasOverlaps)
+	{
+		return;
+	}
+
+	for (const FOverlapResult& OverlapResult : OverlapResults)
+	{
+		AddImpactIgnoredActor(OverlapResult.GetActor());
 	}
 }
 
@@ -266,8 +458,18 @@ bool AArrowProjectile::ShouldIgnoreImpactActor(const AActor* HitActor) const
 		return true;
 	}
 
-	return HitActor == this
-		|| HitActor == GetOwner()
-		|| HitActor == GetInstigator()
-		|| HitActor == ImpactIgnoredActor.Get();
+	if (HitActor == this)
+	{
+		return true;
+	}
+
+	for (const TWeakObjectPtr<AActor>& IgnoredActor : ImpactIgnoredActors)
+	{
+		if (IgnoredActor.Get() == HitActor)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
