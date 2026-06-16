@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "ScalableFloat.h"
 #include "ArrowProjectile.generated.h"
 
 class UProjectileMovementComponent;
@@ -12,7 +11,7 @@ class USceneComponent;
 class UCapsuleComponent;
 class UStaticMeshComponent;
 class UArrowComponent;
-class UGameplayEffect;
+class UArrowDataAsset;
 
 UCLASS()
 class ARROWRITE_API AArrowProjectile : public AActor
@@ -41,6 +40,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Projectile")
 	UArrowComponent* GetLaunchDirectionArrow() const { return LaunchDirectionArrow; }
+
+	UFUNCTION(BlueprintPure, Category = "Projectile|Arrow")
+	UArrowDataAsset* GetArrowData() const { return ArrowData; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -91,6 +93,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Arrow")
+	TObjectPtr<UArrowDataAsset> ArrowData;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Impact")
 	FName ArrowTipSocketName = TEXT("ArrowTip");
 
@@ -102,12 +107,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Impact", meta = (ClampMin = "0.0"))
 	float InitialShooterIgnoreRadius = 160.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Damage")
-	TSubclassOf<UGameplayEffect> DamageEffectClass;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Damage")
-	FScalableFloat BaseDamage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Damage", meta = (ClampMin = "1.0"))
 	float DamageLevel = 1.0f;

@@ -13,8 +13,8 @@
 #include "Engine/World.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "GameFramework/Character.h"
-#include "GameplayEffect.h"
 #include "Engine/OverlapResult.h"
+#include "Projectiles/ArrowDataAsset.h"
 #include "Tags/GameplayTags.h"
 
 namespace
@@ -292,7 +292,7 @@ FVector AArrowProjectile::GetArrowTipWorldLocation() const
 
 bool AArrowProjectile::ApplyDamageToHitActor(const FHitResult& Hit)
 {
-	if (!HasAuthority() || !DamageEffectClass)
+	if (!HasAuthority() || !ArrowData || !ArrowData->DamageEffectClass)
 	{
 		return false;
 	}
@@ -335,13 +335,13 @@ bool AArrowProjectile::ApplyDamageToHitActor(const FHitResult& Hit)
 	EffectContext.AddInstigator(GetInstigator(), this);
 	EffectContext.AddHitResult(Hit);
 
-	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, DamageLevel, EffectContext);
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(ArrowData->DamageEffectClass, DamageLevel, EffectContext);
 	if (!SpecHandle.IsValid())
 	{
 		return false;
 	}
 
-	const float Damage = BaseDamage.GetValueAtLevel(DamageLevel);
+	const float Damage = ArrowData->BaseDamage.GetValueAtLevel(DamageLevel);
 	SpecHandle.Data->SetSetByCallerMagnitude(ArrowriteGameplayTags::Shared_SetByCaller_BaseDamage, Damage);
 
 	if (APlayerCharacter* HitPlayerCharacter = Cast<APlayerCharacter>(HitActor))
