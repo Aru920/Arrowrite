@@ -51,6 +51,7 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(APlayerCharacter, bBowAimPoseActive);
+	DOREPLIFETIME(APlayerCharacter, LastHitReactDirection);
 }
 
 UAbilitySystemComponent* APlayerCharacter::GetAbilitySystemComponent() const
@@ -119,6 +120,11 @@ void APlayerCharacter::SetBowAimPoseActive(bool bShouldUseBowAimPose)
 	{
 		ServerSetBowAimPoseActive(bShouldUseBowAimPose);
 	}
+}
+
+void APlayerCharacter::SetLastHitReactDirection(EHitReactDirection NewHitReactDirection)
+{
+	LastHitReactDirection = NewHitReactDirection;
 }
 
 void APlayerCharacter::ApplyBowAimPoseActive()

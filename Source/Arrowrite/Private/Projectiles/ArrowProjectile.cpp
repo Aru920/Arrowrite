@@ -4,6 +4,8 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "BlueprintFunctionLibraries/CombatBlueprintLibrary.h"
+#include "Character/Player/PlayerCharacter.h"
 #include "Components/ArrowComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
@@ -134,6 +136,8 @@ void AArrowProjectile::LaunchArrow(FVector LaunchDirection, float Intensity)
 	ProjectileMovement->MaxSpeed = FMath::Max(MaxLaunchSpeed, LaunchSpeed);
 	ProjectileMovement->Velocity = Direction * LaunchSpeed;
 	ProjectileMovement->Activate(true);
+
+	OnArrowLaunched();
 }
 
 void AArrowProjectile::HandleImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
@@ -339,6 +343,12 @@ bool AArrowProjectile::ApplyDamageToHitActor(const FHitResult& Hit)
 
 	const float Damage = BaseDamage.GetValueAtLevel(DamageLevel);
 	SpecHandle.Data->SetSetByCallerMagnitude(ArrowriteGameplayTags::Shared_SetByCaller_BaseDamage, Damage);
+
+	if (APlayerCharacter* HitPlayerCharacter = Cast<APlayerCharacter>(HitActor))
+	{
+		AActor* SourceActor = GetInstigator() ? Cast<AActor>(GetInstigator()) : GetOwner();
+		HitPlayerCharacter->SetLastHitReactDirection(UCombatBlueprintLibrary::CalculateHitReactDirection(HitPlayerCharacter, SourceActor));
+	}
 
 	const FActiveGameplayEffectHandle ActiveEffectHandle = SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 	return ActiveEffectHandle.WasSuccessfullyApplied();

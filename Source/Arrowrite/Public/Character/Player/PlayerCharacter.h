@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
+#include "BlueprintFunctionLibraries/CombatBlueprintLibrary.h"
 #include "Character/BaseCharacter.h"
 #include "GameplayTagContainer.h"
 #include "PlayerCharacter.generated.h"
@@ -51,6 +52,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	void SetBowAimPoseActive(bool bShouldUseBowAimPose);
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void SetLastHitReactDirection(EHitReactDirection NewHitReactDirection);
+
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	EHitReactDirection GetLastHitReactDirection() const { return LastHitReactDirection; }
 
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
@@ -117,4 +124,7 @@ protected:
 
 	UPROPERTY(ReplicatedUsing = OnRep_BowAimPoseActive, BlueprintReadOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	bool bBowAimPoseActive = false;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	EHitReactDirection LastHitReactDirection = EHitReactDirection::Front;
 };

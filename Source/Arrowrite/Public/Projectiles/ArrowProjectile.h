@@ -70,6 +70,9 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Projectile")
 	void OnArrowImpact(const FHitResult& Hit);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Projectile")
+	void OnArrowLaunched();
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<USceneComponent> SceneRoot;
 
