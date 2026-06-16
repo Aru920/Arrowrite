@@ -12,6 +12,7 @@ class UCapsuleComponent;
 class UStaticMeshComponent;
 class UArrowComponent;
 class UArrowDataAsset;
+class UAbilitySystemComponent;
 
 UCLASS()
 class ARROWRITE_API AArrowProjectile : public AActor
@@ -61,7 +62,9 @@ protected:
 	void StopProjectileMovement();
 	void StickArrowToImpact(const FHitResult& Hit, const FVector& ImpactDirection);
 	bool ApplyDamageToHitActor(const FHitResult& Hit);
+	bool ApplyStatusEffectToHitActor(const FHitResult& Hit);
 	void SendHitReactEvent(const FHitResult& Hit) const;
+	UAbilitySystemComponent* GetSourceAbilitySystemComponent() const;
 	void ConfigureProjectileCollision() const;
 	bool TryResolveCharacterMeshHit(const FHitResult& Hit, FHitResult& ResolvedHit) const;
 	void AddImpactIgnoredActor(AActor* ActorToIgnore);

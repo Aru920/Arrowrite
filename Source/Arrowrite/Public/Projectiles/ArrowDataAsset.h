@@ -27,6 +27,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|Damage")
 	FScalableFloat BaseDamage;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|Status")
+	TSubclassOf<UGameplayEffect> StatusEffectClass;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|FX")
 	TObjectPtr<UParticleSystem> TrailFX;
 
