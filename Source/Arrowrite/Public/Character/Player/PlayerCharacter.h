@@ -20,6 +20,7 @@ class UPlayerAbilitySystemComponent;
 class UPlayerAttributeSet;
 class UPlayerEquipmentComponent;
 class USpringArmComponent;
+struct FOnAttributeChangeData;
 struct FInputActionValue;
 
 UCLASS()
@@ -67,7 +68,9 @@ private:
 	void RemoveInputMappingContextLocal(UInputMappingContext* MappingContext) const;
 	void ApplyBowAimPoseActive();
 	void InitAbilityActorInfo();
+	void BindAttributeDelegates();
 	void GiveStartupAbilities();
+	void HandleMovementSpeedMultiplierChanged(const FOnAttributeChangeData& Data);
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void StartSprinting();
@@ -127,4 +130,6 @@ protected:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
 	EHitReactDirection LastHitReactDirection = EHitReactDirection::Front;
+
+	bool bAttributeDelegatesBound = false;
 };

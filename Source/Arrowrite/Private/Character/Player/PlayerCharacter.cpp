@@ -12,6 +12,7 @@
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameplayEffectTypes.h"
 #include "Input/InputConfigDataAsset.h"
 #include "InputActionValue.h"
 #include "Net/UnrealNetwork.h"
@@ -236,8 +237,26 @@ void APlayerCharacter::InitAbilityActorInfo()
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(GamePlayerState, this);
+		BindAttributeDelegates();
 		GiveStartupAbilities();
 	}
+}
+
+void APlayerCharacter::BindAttributeDelegates()
+{
+	if (bAttributeDelegatesBound || !AbilitySystemComponent || !AttributeSet)
+	{
+		return;
+	}
+
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMovementSpeedMultiplierAttribute()).AddUObject(this, &ThisClass::HandleMovementSpeedMultiplierChanged);
+	SetMovementSpeedMultiplier(AttributeSet->GetMovementSpeedMultiplier());
+	bAttributeDelegatesBound = true;
+}
+
+void APlayerCharacter::HandleMovementSpeedMultiplierChanged(const FOnAttributeChangeData& Data)
+{
+	SetMovementSpeedMultiplier(Data.NewValue);
 }
 
 void APlayerCharacter::GiveStartupAbilities()

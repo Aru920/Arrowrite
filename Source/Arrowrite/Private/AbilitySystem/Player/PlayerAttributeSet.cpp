@@ -11,6 +11,7 @@ UPlayerAttributeSet::UPlayerAttributeSet()
 {
 	InitMaxHealth(100.0f);
 	InitHealth(100.0f);
+	InitMovementSpeedMultiplier(1.0f);
 	InitDamageTaken(0.0f);
 }
 
@@ -20,6 +21,7 @@ void UPlayerAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UPlayerAttributeSet, Health, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UPlayerAttributeSet, MaxHealth, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPlayerAttributeSet, MovementSpeedMultiplier, COND_None, REPNOTIFY_Always);
 }
 
 void UPlayerAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -29,6 +31,10 @@ void UPlayerAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute
 	if (Attribute == GetMaxHealthAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 1.0f);
+	}
+	else if (Attribute == GetMovementSpeedMultiplierAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.1f, 2.0f);
 	}
 }
 
@@ -70,6 +76,10 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 			AddDeadTagIfHealthDepleted();
 		}
 	}
+	else if (Data.EvaluatedData.Attribute == GetMovementSpeedMultiplierAttribute())
+	{
+		SetMovementSpeedMultiplier(FMath::Clamp(GetMovementSpeedMultiplier(), 0.1f, 2.0f));
+	}
 }
 
 void UPlayerAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth) const
@@ -80,4 +90,9 @@ void UPlayerAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth) 
 void UPlayerAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPlayerAttributeSet, MaxHealth, OldMaxHealth);
+}
+
+void UPlayerAttributeSet::OnRep_MovementSpeedMultiplier(const FGameplayAttributeData& OldMovementSpeedMultiplier) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPlayerAttributeSet, MovementSpeedMultiplier, OldMovementSpeedMultiplier);
 }

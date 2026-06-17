@@ -60,6 +60,12 @@ void ABaseCharacter::ServerSetSprinting_Implementation(bool bNewIsSprinting)
 	SetSprinting(bNewIsSprinting);
 }
 
+void ABaseCharacter::SetMovementSpeedMultiplier(float NewMovementSpeedMultiplier)
+{
+	MovementSpeedMultiplier = FMath::Clamp(NewMovementSpeedMultiplier, 0.1f, 2.0f);
+	ApplyMovementSettings();
+}
+
 void ABaseCharacter::OnRep_IsSprinting()
 {
 	ApplyMovementSettings();
@@ -73,5 +79,5 @@ void ABaseCharacter::ApplyMovementSettings()
 		return;
 	}
 
-	MovementComponent->MaxWalkSpeed = bIsSprinting ? RunSpeed : WalkSpeed;
+	MovementComponent->MaxWalkSpeed = (bIsSprinting ? RunSpeed : WalkSpeed) * MovementSpeedMultiplier;
 }

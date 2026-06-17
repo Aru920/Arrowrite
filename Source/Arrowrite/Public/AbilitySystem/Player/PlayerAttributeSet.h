@@ -33,6 +33,10 @@ public:
 	FGameplayAttributeData MaxHealth;
 	ATTRIBUTE_ACCESSORS(UPlayerAttributeSet, MaxHealth)
 
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MovementSpeedMultiplier, Category = "Movement")
+	FGameplayAttributeData MovementSpeedMultiplier;
+	ATTRIBUTE_ACCESSORS(UPlayerAttributeSet, MovementSpeedMultiplier)
+
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	FGameplayAttributeData DamageTaken;
 	ATTRIBUTE_ACCESSORS(UPlayerAttributeSet, DamageTaken)
@@ -43,4 +47,7 @@ protected:
 
 	UFUNCTION()
 	void OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth) const;
+
+	UFUNCTION()
+	void OnRep_MovementSpeedMultiplier(const FGameplayAttributeData& OldMovementSpeedMultiplier) const;
 };

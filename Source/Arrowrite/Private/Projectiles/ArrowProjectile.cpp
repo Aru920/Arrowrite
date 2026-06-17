@@ -91,6 +91,16 @@ void AArrowProjectile::Tick(float DeltaSeconds)
 	SetActorRotation(ProjectileMovement->Velocity.GetSafeNormal().Rotation());
 }
 
+void AArrowProjectile::OnRep_ReplicatedMovement()
+{
+	if (bHasImpacted)
+	{
+		return;
+	}
+
+	Super::OnRep_ReplicatedMovement();
+}
+
 void AArrowProjectile::BeginPlay()
 {
 	Super::BeginPlay();
@@ -223,7 +233,20 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 		? ProjectileMovement->Velocity.GetSafeNormal()
 		: GetActorForwardVector();
 
-	MulticastStickArrow(ImpactHit, ImpactDirection);
+	StopProjectileMovement();
+	if (CollisionComponent)
+	{
+		CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	StickArrowToImpact(ImpactHit, ImpactDirection);
+	SetReplicateMovement(false);
+	ForceNetUpdate();
+
+	const FVector MeshLocation = ArrowMesh ? ArrowMesh->GetComponentLocation() : GetActorLocation();
+	const FRotator MeshRotation = ArrowMesh ? ArrowMesh->GetComponentRotation() : GetActorRotation();
+
+	MulticastStickArrow(ImpactHit, GetActorLocation(), GetActorRotation(), MeshLocation, MeshRotation);
 	const bool bAppliedDamage = ApplyDamageToHitActor(ImpactHit);
 	ApplyStatusEffectToHitActor(ImpactHit);
 
@@ -233,7 +256,7 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 	}
 }
 
-void AArrowProjectile::MulticastStickArrow_Implementation(const FHitResult& Hit, FVector_NetQuantizeNormal ImpactDirection)
+void AArrowProjectile::MulticastStickArrow_Implementation(const FHitResult& Hit, FVector_NetQuantize ActorLocation, FRotator ActorRotation, FVector_NetQuantize MeshLocation, FRotator MeshRotation)
 {
 	bHasImpacted = true;
 	StopProjectileMovement();
@@ -243,7 +266,23 @@ void AArrowProjectile::MulticastStickArrow_Implementation(const FHitResult& Hit,
 		CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
-	StickArrowToImpact(Hit, FVector(ImpactDirection));
+	SetActorLocationAndRotation(FVector(ActorLocation), ActorRotation, false, nullptr, ETeleportType::TeleportPhysics);
+
+	if (ArrowMesh)
+	{
+		ArrowMesh->SetWorldLocationAndRotation(FVector(MeshLocation), MeshRotation, false, nullptr, ETeleportType::TeleportPhysics);
+	}
+
+	if (UPrimitiveComponent* HitPrimitive = Hit.GetComponent())
+	{
+		AttachToComponent(HitPrimitive, FAttachmentTransformRules::KeepWorldTransform, Hit.BoneName);
+	}
+
+	if (ImpactLifeSpan > 0.0f)
+	{
+		SetLifeSpan(ImpactLifeSpan);
+	}
+
 	SetReplicateMovement(false);
 	OnArrowImpact(Hit);
 }
@@ -372,6 +411,9 @@ bool AArrowProjectile::ApplyStatusEffectToHitActor(const FHitResult& Hit)
 	{
 		return false;
 	}
+
+	const float StatusDamage = ArrowData->StatusDamage.GetValueAtLevel(DamageLevel);
+	SpecHandle.Data->SetSetByCallerMagnitude(ArrowriteGameplayTags::Shared_SetByCaller_BaseDamage, StatusDamage);
 
 	const FActiveGameplayEffectHandle ActiveEffectHandle = SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 	return ActiveEffectHandle.WasSuccessfullyApplied();

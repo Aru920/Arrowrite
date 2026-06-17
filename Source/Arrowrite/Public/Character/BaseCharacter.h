@@ -24,6 +24,7 @@ protected:
 
 	virtual void ApplyMovementSettings();
 	void SetSprinting(bool bNewIsSprinting);
+	void SetMovementSpeedMultiplier(float NewMovementSpeedMultiplier);
 
 	UFUNCTION(Server, Reliable)
 	void ServerSetSprinting(bool bNewIsSprinting);
@@ -36,6 +37,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0"))
 	float RunSpeed = 500.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	float MovementSpeedMultiplier = 1.0f;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsSprinting, BlueprintReadOnly, Category = "Movement")
 	bool bIsSprinting = false;
