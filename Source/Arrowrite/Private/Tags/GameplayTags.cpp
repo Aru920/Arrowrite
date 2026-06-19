@@ -6,9 +6,11 @@ namespace ArrowriteGameplayTags
 {
 	UE_DEFINE_GAMEPLAY_TAG(Input_Aim, "Input.Aim");
 	UE_DEFINE_GAMEPLAY_TAG(Input_Fire, "Input.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(Input_ArrowMenu, "Input.ArrowMenu");
 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Bow_Aim, "Ability.Bow.Aim");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Bow_Fire, "Ability.Bow.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Bow_ArrowMenu, "Ability.Bow.ArrowMenu");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Player_Death, "Ability.Player.Death");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Player_HitReact, "Ability.Player.HitReact");
 

@@ -150,6 +150,11 @@ void AArrowProjectile::LaunchArrow(FVector LaunchDirection, float Intensity)
 	OnArrowLaunched();
 }
 
+void AArrowProjectile::SetArrowData(UArrowDataAsset* NewArrowData)
+{
+	ArrowData = NewArrowData;
+}
+
 void AArrowProjectile::HandleImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
 {
 	ProcessImpact(Hit);

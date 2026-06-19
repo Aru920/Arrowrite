@@ -28,6 +28,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Projectile", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	void LaunchArrow(FVector LaunchDirection, float Intensity);
 
+	UFUNCTION(BlueprintCallable, Category = "Projectile|Arrow")
+	void SetArrowData(UArrowDataAsset* NewArrowData);
+
 	UFUNCTION(BlueprintCallable, Category = "Projectile")
 	void SetImpactIgnoredActor(AActor* ActorToIgnore);
 

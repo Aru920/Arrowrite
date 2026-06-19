@@ -11,8 +11,10 @@
 class UGameplayEffect;
 class UParticleSystem;
 class USoundBase;
+class UStaticMesh;
+class UTexture2D;
 
-UCLASS()
+UCLASS(BlueprintType)
 class ARROWRITE_API UArrowDataAsset : public UDataAsset
 {
 	GENERATED_BODY()
@@ -20,6 +22,24 @@ class ARROWRITE_API UArrowDataAsset : public UDataAsset
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow")
 	FGameplayTag ArrowTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow")
+	FText DisplayName;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|UI")
+	FText Description;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|UI")
+	TObjectPtr<UTexture2D> Icon;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|Visual")
+	TObjectPtr<UStaticMesh> ProjectileMesh;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|Visual")
+	TObjectPtr<UStaticMesh> PreviewMesh;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|Visual")
+	TObjectPtr<UParticleSystem> EquippedTipFX;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|Damage")
 	TSubclassOf<UGameplayEffect> DamageEffectClass;

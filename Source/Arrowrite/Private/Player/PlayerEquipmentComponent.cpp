@@ -3,6 +3,7 @@
 #include "Player/PlayerEquipmentComponent.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Projectiles/ArrowDataAsset.h"
 #include "Weapons/BaseWeapon.h"
 #include "Weapons/WeaponDataAsset.h"
 
@@ -18,6 +19,7 @@ void UPlayerEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 
 	DOREPLIFETIME(UPlayerEquipmentComponent, CurrentWeaponTag);
 	DOREPLIFETIME(UPlayerEquipmentComponent, CarriedWeapons);
+	DOREPLIFETIME(UPlayerEquipmentComponent, SelectedArrowTag);
 }
 
 void UPlayerEquipmentComponent::RegisterEquippedWeapon(ABaseWeapon* Weapon)
@@ -80,4 +82,65 @@ ABaseWeapon* UPlayerEquipmentComponent::GetWeaponByTag(FGameplayTag WeaponTag) c
 ABaseWeapon* UPlayerEquipmentComponent::GetCurrentWeapon() const
 {
 	return GetWeaponByTag(CurrentWeaponTag);
+}
+
+void UPlayerEquipmentComponent::SelectArrowByTag(FGameplayTag ArrowTag)
+{
+	if (!ArrowTag.IsValid() || !GetArrowDataByTag(ArrowTag))
+	{
+		return;
+	}
+
+	if (SelectedArrowTag == ArrowTag)
+	{
+		OnSelectedArrowChanged(GetSelectedArrowData());
+		return;
+	}
+
+	SelectedArrowTag = ArrowTag;
+	OnSelectedArrowChanged(GetSelectedArrowData());
+
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		ServerSelectArrowByTag(ArrowTag);
+	}
+}
+
+UArrowDataAsset* UPlayerEquipmentComponent::GetSelectedArrowData() const
+{
+	UArrowDataAsset* SelectedData = GetArrowDataByTag(SelectedArrowTag);
+	if (SelectedData)
+	{
+		return SelectedData;
+	}
+
+	return AvailableArrowData.Num() > 0 ? AvailableArrowData[0] : nullptr;
+}
+
+UArrowDataAsset* UPlayerEquipmentComponent::GetArrowDataByTag(FGameplayTag ArrowTag) const
+{
+	if (!ArrowTag.IsValid())
+	{
+		return nullptr;
+	}
+
+	for (UArrowDataAsset* ArrowData : AvailableArrowData)
+	{
+		if (ArrowData && ArrowData->ArrowTag == ArrowTag)
+		{
+			return ArrowData;
+		}
+	}
+
+	return nullptr;
+}
+
+void UPlayerEquipmentComponent::ServerSelectArrowByTag_Implementation(FGameplayTag ArrowTag)
+{
+	SelectArrowByTag(ArrowTag);
+}
+
+void UPlayerEquipmentComponent::OnRep_SelectedArrowTag()
+{
+	OnSelectedArrowChanged(GetSelectedArrowData());
 }
