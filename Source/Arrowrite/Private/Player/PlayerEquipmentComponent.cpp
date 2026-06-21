@@ -112,12 +112,12 @@ void UPlayerEquipmentComponent::SelectArrowByTag(FGameplayTag ArrowTag)
 
 	if (SelectedArrowTag == ArrowTag)
 	{
-		OnSelectedArrowChanged(GetSelectedArrowData());
+		BroadcastSelectedArrowChanged();
 		return;
 	}
 
 	SelectedArrowTag = ArrowTag;
-	OnSelectedArrowChanged(GetSelectedArrowData());
+	BroadcastSelectedArrowChanged();
 
 	if (!GetOwner() || !GetOwner()->HasAuthority())
 	{
@@ -161,5 +161,12 @@ void UPlayerEquipmentComponent::ServerSelectArrowByTag_Implementation(FGameplayT
 
 void UPlayerEquipmentComponent::OnRep_SelectedArrowTag()
 {
-	OnSelectedArrowChanged(GetSelectedArrowData());
+	BroadcastSelectedArrowChanged();
+}
+
+void UPlayerEquipmentComponent::BroadcastSelectedArrowChanged()
+{
+	UArrowDataAsset* SelectedArrowData = GetSelectedArrowData();
+	OnSelectedArrowChanged(SelectedArrowData);
+	OnSelectedArrowDataChanged.Broadcast(SelectedArrowData);
 }

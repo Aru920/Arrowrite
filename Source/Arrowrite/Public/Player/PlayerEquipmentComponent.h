@@ -10,6 +10,8 @@
 class ABaseWeapon;
 class UArrowDataAsset;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSelectedArrowDataChangedDelegate, UArrowDataAsset*, SelectedArrowData);
+
 USTRUCT(BlueprintType)
 struct FCarriedWeaponEntry
 {
@@ -62,6 +64,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment|Arrows")
 	const TArray<UArrowDataAsset*>& GetAvailableArrowData() const { return AvailableArrowData; }
 
+	UPROPERTY(BlueprintAssignable, Category = "Equipment|Arrows")
+	FSelectedArrowDataChangedDelegate OnSelectedArrowDataChanged;
+
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerSelectArrowByTag(FGameplayTag ArrowTag);
@@ -71,6 +76,8 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Equipment|Arrows")
 	void OnSelectedArrowChanged(UArrowDataAsset* SelectedArrowData);
+
+	void BroadcastSelectedArrowChanged();
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Equipment")
 	FGameplayTag CurrentWeaponTag;

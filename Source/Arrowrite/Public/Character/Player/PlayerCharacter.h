@@ -7,6 +7,7 @@
 #include "BlueprintFunctionLibraries/CombatBlueprintLibrary.h"
 #include "Character/BaseCharacter.h"
 #include "GameplayTagContainer.h"
+#include "Interfaces/CombatUIInterface.h"
 #include "PlayerCharacter.generated.h"
 
 class UAbilitySystemComponent;
@@ -18,13 +19,14 @@ class UInputAction;
 class UInputMappingContext;
 class UPlayerAbilitySystemComponent;
 class UPlayerAttributeSet;
+class UPlayerCombatUIComponent;
 class UPlayerEquipmentComponent;
 class USpringArmComponent;
 struct FOnAttributeChangeData;
 struct FInputActionValue;
 
 UCLASS()
-class ARROWRITE_API APlayerCharacter : public ABaseCharacter, public IAbilitySystemInterface
+class ARROWRITE_API APlayerCharacter : public ABaseCharacter, public IAbilitySystemInterface, public ICombatUIInterface
 {
 	GENERATED_BODY()
 
@@ -71,6 +73,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Death")
 	void RequestRespawn(float RespawnDelay = 3.0f);
+
+	virtual UPlayerCombatUIComponent* GetPlayerCombatUIComponent_Implementation() const override { return PlayerCombatUIComponent; }
 
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -125,6 +129,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UPlayerEquipmentComponent> EquipmentComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UPlayerCombatUIComponent> PlayerCombatUIComponent;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
@@ -162,4 +169,6 @@ protected:
 	EHitReactDirection LastHitReactDirection = EHitReactDirection::Front;
 
 	bool bAttributeDelegatesBound = false;
+
+	FDelegateHandle MovementSpeedMultiplierChangedDelegateHandle;
 };

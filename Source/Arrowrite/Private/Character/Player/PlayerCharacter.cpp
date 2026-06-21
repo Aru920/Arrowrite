@@ -21,6 +21,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Player/PlayerEquipmentComponent.h"
 #include "Player/GamePlayerState.h"
+#include "UI/PlayerCombatUIComponent.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -34,6 +35,7 @@ APlayerCharacter::APlayerCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 
 	EquipmentComponent = CreateDefaultSubobject<UPlayerEquipmentComponent>(TEXT("EquipmentComponent"));
+	PlayerCombatUIComponent = CreateDefaultSubobject<UPlayerCombatUIComponent>(TEXT("PlayerCombatUIComponent"));
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -74,6 +76,12 @@ UAbilitySystemComponent* APlayerCharacter::GetAbilitySystemComponent() const
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (bAttributeDelegatesBound && AbilitySystemComponent && AttributeSet)
+	{
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMovementSpeedMultiplierAttribute()).Remove(MovementSpeedMultiplierChangedDelegateHandle);
+		bAttributeDelegatesBound = false;
+	}
+
 	if (EquipmentComponent)
 	{
 		EquipmentComponent->DestroyCarriedWeapons();
@@ -336,6 +344,10 @@ void APlayerCharacter::InitAbilityActorInfo()
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(GamePlayerState, this);
+		if (PlayerCombatUIComponent)
+		{
+			PlayerCombatUIComponent->InitializeWithAbilitySystem(AbilitySystemComponent, AttributeSet);
+		}
 		BindAttributeDelegates();
 		GiveStartupAbilities();
 	}
@@ -348,7 +360,8 @@ void APlayerCharacter::BindAttributeDelegates()
 		return;
 	}
 
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMovementSpeedMultiplierAttribute()).AddUObject(this, &ThisClass::HandleMovementSpeedMultiplierChanged);
+	MovementSpeedMultiplierChangedDelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMovementSpeedMultiplierAttribute()).AddUObject(this, &ThisClass::HandleMovementSpeedMultiplierChanged);
+
 	SetMovementSpeedMultiplier(AttributeSet->GetMovementSpeedMultiplier());
 	bAttributeDelegatesBound = true;
 }

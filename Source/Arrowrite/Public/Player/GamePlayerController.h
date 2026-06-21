@@ -10,4 +10,18 @@ UCLASS()
 class ARROWRITE_API AGamePlayerController : public APlayerController
 {
 	GENERATED_BODY()
+
+public:
+	virtual void BeginPlay() override;
+	virtual void SetPawn(APawn* InPawn) override;
+
+	UFUNCTION(Client, Reliable)
+	void ClientRefreshLocalPawn(APawn* NewPawn);
+
+protected:
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void OnLocalPawnChanged(APawn* NewPawn);
+
+private:
+	void NotifyLocalPawnChanged(APawn* NewPawn);
 };

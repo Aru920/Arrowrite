@@ -4,6 +4,9 @@
 
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbilityTypes.h"
+#include "Core/DeathmatchGameMode.h"
+#include "GameFramework/Controller.h"
+#include "GameFramework/Pawn.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 #include "Tags/GameplayTags.h"
@@ -70,6 +73,32 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 			}
 
 			OwningASC->AddLooseGameplayTag(ArrowriteGameplayTags::State_Dead);
+
+			AActor* TargetActor = OwningASC->GetAvatarActor();
+			APawn* VictimPawn = Cast<APawn>(TargetActor);
+			AController* VictimController = VictimPawn ? VictimPawn->GetController() : nullptr;
+
+			AController* KillerController = nullptr;
+			AActor* InstigatorActor = Data.EffectSpec.GetContext().GetOriginalInstigator();
+			if (APawn* InstigatorPawn = Cast<APawn>(InstigatorActor))
+			{
+				KillerController = InstigatorPawn->GetController();
+			}
+			else if (AController* InstigatorController = Cast<AController>(InstigatorActor))
+			{
+				KillerController = InstigatorController;
+			}
+			else if (InstigatorActor)
+			{
+				KillerController = InstigatorActor->GetInstigatorController();
+			}
+
+			if (ADeathmatchGameMode* DeathmatchGameMode = TargetActor && TargetActor->GetWorld()
+				? TargetActor->GetWorld()->GetAuthGameMode<ADeathmatchGameMode>()
+				: nullptr)
+			{
+				DeathmatchGameMode->RecordPlayerDeath(VictimController, KillerController);
+			}
 
 			FGameplayEventData EventData;
 			EventData.EventTag = ArrowriteGameplayTags::Event_Player_Death;
