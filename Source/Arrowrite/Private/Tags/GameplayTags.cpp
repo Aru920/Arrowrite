@@ -23,6 +23,7 @@ namespace ArrowriteGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Burning, "State.Burning");
 	UE_DEFINE_GAMEPLAY_TAG(State_Poisoned, "State.Poisoned");
 	UE_DEFINE_GAMEPLAY_TAG(State_Frozen, "State.Frozen");
+	UE_DEFINE_GAMEPLAY_TAG(State_Stamina_RegenBlocked, "State.Stamina.RegenBlocked");
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Animation_EnableAiming, "Event.Animation.EnableAiming");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Animation_DisableAiming, "Event.Animation.DisableAiming");
@@ -35,6 +36,7 @@ namespace ArrowriteGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Status_Frozen, "GameplayCue.Status.Frozen");
 
 	UE_DEFINE_GAMEPLAY_TAG(Shared_SetByCaller_BaseDamage, "Shared.SetByCaller.BaseDamage");
+	UE_DEFINE_GAMEPLAY_TAG(Shared_SetByCaller_StaminaCost, "Shared.SetByCaller.StaminaCost");
 
 	UE_DEFINE_GAMEPLAY_TAG(Weapon_Bow, "Weapon.Bow");
 

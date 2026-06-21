@@ -3,15 +3,35 @@
 #include "AbilitySystem/Abilities/Player/PlayerGameplayAbility.h"
 
 #include "AbilitySystem/Player/PlayerAbilitySystemComponent.h"
+#include "AbilitySystem/Player/PlayerAttributeSet.h"
 #include "Character/Player/PlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Player/GamePlayerController.h"
+#include "Player/GamePlayerState.h"
 #include "Player/PlayerEquipmentComponent.h"
 #include "Weapons/BaseWeapon.h"
 
 UPlayerAbilitySystemComponent* UPlayerGameplayAbility::GetPlayerAbilitySystemComponentFromActorInfo() const
 {
 	return Cast<UPlayerAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
+}
+
+UPlayerAttributeSet* UPlayerGameplayAbility::GetPlayerAttributeSetFromActorInfo() const
+{
+	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
+	const AGamePlayerState* GamePlayerState = ActorInfo ? Cast<AGamePlayerState>(ActorInfo->OwnerActor.Get()) : nullptr;
+	return GamePlayerState ? GamePlayerState->GetPlayerAttributeSet() : nullptr;
+}
+
+bool UPlayerGameplayAbility::HasEnoughStamina(const float StaminaCost) const
+{
+	if (StaminaCost <= 0.0f)
+	{
+		return true;
+	}
+
+	const UPlayerAttributeSet* AttributeSet = GetPlayerAttributeSetFromActorInfo();
+	return AttributeSet && AttributeSet->GetStamina() >= StaminaCost;
 }
 
 APlayerCharacter* UPlayerGameplayAbility::GetPlayerCharacterFromActorInfo() const

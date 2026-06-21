@@ -47,6 +47,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|Damage")
 	FScalableFloat BaseDamage;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|Cost", meta = (ClampMin = "0.0"))
+	float StaminaCost = 10.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Arrow|Status")
 	TSubclassOf<UGameplayEffect> StatusEffectClass;
 

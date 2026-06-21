@@ -10,6 +10,7 @@ class AGamePlayerController;
 class APlayerCharacter;
 class ABaseWeapon;
 class UPlayerAbilitySystemComponent;
+class UPlayerAttributeSet;
 class UPlayerEquipmentComponent;
 class USkeletalMeshComponent;
 
@@ -21,6 +22,12 @@ class ARROWRITE_API UPlayerGameplayAbility : public UGameplayAbilityBase
 protected:
 	UFUNCTION(BlueprintPure, Category = "Ability|Player")
 	UPlayerAbilitySystemComponent* GetPlayerAbilitySystemComponentFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "Ability|Player")
+	UPlayerAttributeSet* GetPlayerAttributeSetFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "Ability|Player|Stamina")
+	bool HasEnoughStamina(float StaminaCost) const;
 
 	UFUNCTION(BlueprintPure, Category = "Ability|Player")
 	APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
