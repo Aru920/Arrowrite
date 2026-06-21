@@ -7,10 +7,13 @@
 #include "AbilitySystem/Player/PlayerAttributeSet.h"
 #include "Animation/Player/PlayerAnimInstance.h"
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Core/DeathmatchGameMode.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameplayEffectTypes.h"
 #include "Input/InputConfigDataAsset.h"
@@ -52,6 +55,7 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(APlayerCharacter, bBowAimPoseActive);
+	DOREPLIFETIME(APlayerCharacter, bDeathStateActive);
 	DOREPLIFETIME(APlayerCharacter, LastHitReactDirection);
 }
 
@@ -66,6 +70,16 @@ UAbilitySystemComponent* APlayerCharacter::GetAbilitySystemComponent() const
 	}
 
 	return AbilitySystemComponent;
+}
+
+void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (EquipmentComponent)
+	{
+		EquipmentComponent->DestroyCarriedWeapons();
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void APlayerCharacter::AddInputMappingContext(UInputMappingContext* MappingContext, int32 Priority)
@@ -128,12 +142,97 @@ void APlayerCharacter::SetLastHitReactDirection(EHitReactDirection NewHitReactDi
 	LastHitReactDirection = NewHitReactDirection;
 }
 
+void APlayerCharacter::EnterDeathState()
+{
+	SetDeathState(true);
+}
+
+void APlayerCharacter::ExitDeathState()
+{
+	SetDeathState(false);
+}
+
+void APlayerCharacter::RequestRespawn(float RespawnDelay)
+{
+	if (!HasAuthority())
+	{
+		ServerRequestRespawn(RespawnDelay);
+		return;
+	}
+
+	if (ADeathmatchGameMode* DeathmatchGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ADeathmatchGameMode>() : nullptr)
+	{
+		DeathmatchGameMode->RequestPlayerRespawn(GetController(), RespawnDelay);
+	}
+}
+
 void APlayerCharacter::ApplyBowAimPoseActive()
 {
 	if (UPlayerAnimInstance* PlayerAnimInstance = Cast<UPlayerAnimInstance>(GetMesh() ? GetMesh()->GetAnimInstance() : nullptr))
 	{
 		PlayerAnimInstance->SetBowAimPoseActive(bBowAimPoseActive);
 	}
+}
+
+void APlayerCharacter::SetDeathState(bool bNewDeathState)
+{
+	if (!HasAuthority())
+	{
+		ServerSetDeathState(bNewDeathState);
+		return;
+	}
+
+	if (bDeathStateActive == bNewDeathState)
+	{
+		ApplyDeathState();
+		return;
+	}
+
+	bDeathStateActive = bNewDeathState;
+	ApplyDeathState();
+
+	if (bDeathStateActive)
+	{
+		RequestRespawn(RespawnDelayAfterDeath);
+	}
+}
+
+void APlayerCharacter::ApplyDeathState()
+{
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	UCapsuleComponent* CharacterCapsule = GetCapsuleComponent();
+
+	if (bDeathStateActive)
+	{
+		bIsSprinting = false;
+		bBowAimPoseActive = false;
+		ApplyBowAimPoseActive();
+
+		if (MovementComponent)
+		{
+			MovementComponent->StopMovementImmediately();
+			MovementComponent->DisableMovement();
+		}
+
+		if (CharacterCapsule)
+		{
+			CharacterCapsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+
+		return;
+	}
+
+	if (CharacterCapsule)
+	{
+		CharacterCapsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	}
+
+	if (MovementComponent)
+	{
+		MovementComponent->SetMovementMode(MOVE_Walking);
+	}
+
+	ApplyMovementSettings();
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -271,6 +370,11 @@ void APlayerCharacter::GiveStartupAbilities()
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
+	if (bDeathStateActive)
+	{
+		return;
+	}
+
 	const FVector2D MovementVector = Value.Get<FVector2D>();
 	if (!Controller || MovementVector.IsNearlyZero())
 	{
@@ -301,6 +405,11 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 
 void APlayerCharacter::StartSprinting()
 {
+	if (bDeathStateActive)
+	{
+		return;
+	}
+
 	SetSprinting(true);
 }
 
@@ -311,6 +420,11 @@ void APlayerCharacter::StopSprinting()
 
 void APlayerCharacter::AbilityInputTagPressed(FGameplayTag InputTag)
 {
+	if (bDeathStateActive)
+	{
+		return;
+	}
+
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->AbilityInputTagPressed(InputTag);
@@ -319,6 +433,11 @@ void APlayerCharacter::AbilityInputTagPressed(FGameplayTag InputTag)
 
 void APlayerCharacter::AbilityInputTagReleased(FGameplayTag InputTag)
 {
+	if (bDeathStateActive)
+	{
+		return;
+	}
+
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->AbilityInputTagReleased(InputTag);
@@ -345,7 +464,22 @@ void APlayerCharacter::ServerSetBowAimPoseActive_Implementation(bool bShouldUseB
 	SetBowAimPoseActive(bShouldUseBowAimPose);
 }
 
+void APlayerCharacter::ServerSetDeathState_Implementation(bool bNewDeathState)
+{
+	SetDeathState(bNewDeathState);
+}
+
+void APlayerCharacter::ServerRequestRespawn_Implementation(float RespawnDelay)
+{
+	RequestRespawn(RespawnDelay);
+}
+
 void APlayerCharacter::OnRep_BowAimPoseActive()
 {
 	ApplyBowAimPoseActive();
+}
+
+void APlayerCharacter::OnRep_DeathStateActive()
+{
+	ApplyDeathState();
 }

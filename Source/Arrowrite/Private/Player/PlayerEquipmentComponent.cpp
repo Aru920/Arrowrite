@@ -58,6 +58,25 @@ void UPlayerEquipmentComponent::RegisterEquippedWeapon(ABaseWeapon* Weapon)
 	}
 }
 
+void UPlayerEquipmentComponent::DestroyCarriedWeapons()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	for (FCarriedWeaponEntry& CarriedWeapon : CarriedWeapons)
+	{
+		if (ABaseWeapon* Weapon = CarriedWeapon.Weapon.Get())
+		{
+			Weapon->Destroy();
+		}
+	}
+
+	CarriedWeapons.Empty();
+	CurrentWeaponTag = FGameplayTag();
+}
+
 ABaseWeapon* UPlayerEquipmentComponent::GetWeaponByTag(FGameplayTag WeaponTag) const
 {
 	if (!WeaponTag.IsValid())

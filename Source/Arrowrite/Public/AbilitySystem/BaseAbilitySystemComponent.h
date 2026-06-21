@@ -9,6 +9,7 @@
 #include "BaseAbilitySystemComponent.generated.h"
 
 class UGameplayAbilityBase;
+class UGameplayEffect;
 
 UCLASS()
 class ARROWRITE_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
@@ -17,6 +18,7 @@ class ARROWRITE_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
 
 public:
 	void GiveStartupAbilities(const TArray<TSubclassOf<UGameplayAbilityBase>>& StartupAbilities, int32 AbilityLevel = 1);
+	void ApplyStartupGameplayEffects(const TArray<TSubclassOf<UGameplayEffect>>& StartupGameplayEffects, int32 AbilityLevel = 1);
 
 	UFUNCTION(BlueprintCallable, Category = "Ability System")
 	void GiveWeaponAbilities(const FWeaponAbilitySet& AbilitySet, int32 AbilityLevel = 1);
@@ -25,5 +27,8 @@ public:
 	void AbilityInputTagReleased(const FGameplayTag& InputTag);
 
 private:
-	bool HasAbilityOfClass(TSubclassOf<UGameplayAbilityBase> AbilityClass) const;
+	FGameplayAbilitySpec* FindAbilitySpecOfClass(TSubclassOf<UGameplayAbilityBase> AbilityClass);
+	void RefreshExistingStartupAbility(FGameplayAbilitySpec& AbilitySpec);
+
+	bool bStartupGameplayEffectsApplied = false;
 };

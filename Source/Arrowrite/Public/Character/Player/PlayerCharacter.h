@@ -60,13 +60,28 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	EHitReactDirection GetLastHitReactDirection() const { return LastHitReactDirection; }
 
+	UFUNCTION(BlueprintCallable, Category = "Combat|Death")
+	void EnterDeathState();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Death")
+	void ExitDeathState();
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Death")
+	bool IsDeathStateActive() const { return bDeathStateActive; }
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Death")
+	void RequestRespawn(float RespawnDelay = 3.0f);
+
 protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 private:
 	void AddInputMappingContextLocal(UInputMappingContext* MappingContext, int32 Priority) const;
 	void RemoveInputMappingContextLocal(UInputMappingContext* MappingContext) const;
 	void ApplyBowAimPoseActive();
+	void SetDeathState(bool bNewDeathState);
+	void ApplyDeathState();
 	void InitAbilityActorInfo();
 	void BindAttributeDelegates();
 	void GiveStartupAbilities();
@@ -88,8 +103,17 @@ private:
 	UFUNCTION(Server, Reliable)
 	void ServerSetBowAimPoseActive(bool bShouldUseBowAimPose);
 
+	UFUNCTION(Server, Reliable)
+	void ServerSetDeathState(bool bNewDeathState);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRequestRespawn(float RespawnDelay);
+
 	UFUNCTION()
 	void OnRep_BowAimPoseActive();
+
+	UFUNCTION()
+	void OnRep_DeathStateActive();
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -119,6 +143,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability System", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCharacterStartupData> CharacterStartupData;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Death", meta = (ClampMin = "0.0", AllowPrivateAccess = "true"))
+	float RespawnDelayAfterDeath = 5.0f;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Ability System", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UPlayerAbilitySystemComponent> AbilitySystemComponent;
 
@@ -127,6 +154,9 @@ protected:
 
 	UPROPERTY(ReplicatedUsing = OnRep_BowAimPoseActive, BlueprintReadOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	bool bBowAimPoseActive = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_DeathStateActive, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	bool bDeathStateActive = false;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
 	EHitReactDirection LastHitReactDirection = EHitReactDirection::Front;

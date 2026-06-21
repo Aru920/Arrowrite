@@ -30,6 +30,7 @@ namespace ArrowriteGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Bow_SpawnArrow, "Event.Bow.SpawnArrow");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Bow_ReloadArrow, "Event.Bow.ReloadArrow");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Player_HitReact, "Event.Player.HitReact");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Player_Death, "Event.Player.Death");
 
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Status_Burning, "GameplayCue.Status.Burning");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Status_Poisoned, "GameplayCue.Status.Poisoned");

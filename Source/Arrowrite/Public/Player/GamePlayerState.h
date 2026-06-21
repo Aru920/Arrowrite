@@ -20,6 +20,9 @@ public:
 	UPlayerAbilitySystemComponent* GetPlayerAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UPlayerAttributeSet* GetPlayerAttributeSet() const { return AttributeSet; }
 
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void ResetCombatStateForRespawn();
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability System")
 	TObjectPtr<UPlayerAbilitySystemComponent> AbilitySystemComponent;

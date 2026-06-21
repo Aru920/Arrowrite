@@ -3,6 +3,7 @@
 #include "AbilitySystem/Player/PlayerAttributeSet.h"
 
 #include "AbilitySystemComponent.h"
+#include "Abilities/GameplayAbilityTypes.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 #include "Tags/GameplayTags.h"
@@ -54,7 +55,7 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	const auto AddDeadTagIfHealthDepleted = [this]()
+	const auto HandleDeathIfHealthDepleted = [this, &Data]()
 	{
 		if (GetHealth() > 0.0f)
 		{
@@ -63,14 +64,27 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 
 		if (UAbilitySystemComponent* OwningASC = GetOwningAbilitySystemComponent())
 		{
+			if (OwningASC->HasMatchingGameplayTag(ArrowriteGameplayTags::State_Dead))
+			{
+				return;
+			}
+
 			OwningASC->AddLooseGameplayTag(ArrowriteGameplayTags::State_Dead);
+
+			FGameplayEventData EventData;
+			EventData.EventTag = ArrowriteGameplayTags::Event_Player_Death;
+			EventData.Instigator = Data.EffectSpec.GetContext().GetOriginalInstigator();
+			EventData.Target = OwningASC->GetAvatarActor();
+			EventData.ContextHandle = Data.EffectSpec.GetContext();
+
+			OwningASC->HandleGameplayEvent(ArrowriteGameplayTags::Event_Player_Death, &EventData);
 		}
 	};
 
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
 		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
-		AddDeadTagIfHealthDepleted();
+		HandleDeathIfHealthDepleted();
 	}
 	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
 	{
@@ -94,7 +108,7 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 		if (DamageDone > 0.0f)
 		{
 			SetHealth(FMath::Clamp(GetHealth() - DamageDone, 0.0f, GetMaxHealth()));
-			AddDeadTagIfHealthDepleted();
+			HandleDeathIfHealthDepleted();
 		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetMovementSpeedMultiplierAttribute())

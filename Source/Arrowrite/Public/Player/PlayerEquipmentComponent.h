@@ -35,6 +35,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
 	void RegisterEquippedWeapon(ABaseWeapon* Weapon);
 
+	UFUNCTION(BlueprintCallable, Category = "Equipment")
+	void DestroyCarriedWeapons();
+
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	FGameplayTag GetCurrentWeaponTag() const { return CurrentWeaponTag; }
 

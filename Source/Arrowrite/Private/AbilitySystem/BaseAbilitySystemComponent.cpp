@@ -4,6 +4,7 @@
 
 #include "AbilitySystem/Abilities/GameplayAbilityBase.h"
 #include "Abilities/GameplayAbility.h"
+#include "GameplayEffect.h"
 
 void UBaseAbilitySystemComponent::GiveStartupAbilities(const TArray<TSubclassOf<UGameplayAbilityBase>>& StartupAbilities, int32 AbilityLevel)
 {
@@ -19,8 +20,9 @@ void UBaseAbilitySystemComponent::GiveStartupAbilities(const TArray<TSubclassOf<
 			continue;
 		}
 
-		if (HasAbilityOfClass(AbilityClass))
+		if (FGameplayAbilitySpec* ExistingAbilitySpec = FindAbilitySpecOfClass(AbilityClass))
 		{
+			RefreshExistingStartupAbility(*ExistingAbilitySpec);
 			continue;
 		}
 
@@ -37,6 +39,31 @@ void UBaseAbilitySystemComponent::GiveStartupAbilities(const TArray<TSubclassOf<
 
 		GiveAbility(AbilitySpec);
 	}
+}
+
+void UBaseAbilitySystemComponent::ApplyStartupGameplayEffects(const TArray<TSubclassOf<UGameplayEffect>>& StartupGameplayEffects, int32 AbilityLevel)
+{
+	if (!IsOwnerActorAuthoritative() || bStartupGameplayEffectsApplied || StartupGameplayEffects.IsEmpty())
+	{
+		return;
+	}
+
+	for (const TSubclassOf<UGameplayEffect>& EffectClass : StartupGameplayEffects)
+	{
+		if (!EffectClass)
+		{
+			continue;
+		}
+
+		const UGameplayEffect* EffectCDO = EffectClass->GetDefaultObject<UGameplayEffect>();
+		ApplyGameplayEffectToSelf(
+			EffectCDO,
+			AbilityLevel,
+			MakeEffectContext()
+		);
+	}
+
+	bStartupGameplayEffectsApplied = true;
 }
 
 void UBaseAbilitySystemComponent::GiveWeaponAbilities(const FWeaponAbilitySet& AbilitySet, int32 AbilityLevel)
@@ -111,20 +138,31 @@ void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
 	}
 }
 
-bool UBaseAbilitySystemComponent::HasAbilityOfClass(TSubclassOf<UGameplayAbilityBase> AbilityClass) const
+FGameplayAbilitySpec* UBaseAbilitySystemComponent::FindAbilitySpecOfClass(TSubclassOf<UGameplayAbilityBase> AbilityClass)
 {
 	if (!AbilityClass)
 	{
-		return false;
+		return nullptr;
 	}
 
-	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	for (FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 	{
 		if (AbilitySpec.Ability && AbilitySpec.Ability->GetClass() == AbilityClass)
 		{
-			return true;
+			return &AbilitySpec;
 		}
 	}
 
-	return false;
+	return nullptr;
+}
+
+void UBaseAbilitySystemComponent::RefreshExistingStartupAbility(FGameplayAbilitySpec& AbilitySpec)
+{
+	AbilitySpec.SourceObject = GetAvatarActor();
+
+	const UGameplayAbilityBase* AbilityCDO = Cast<UGameplayAbilityBase>(AbilitySpec.Ability);
+	if (AbilityCDO && AbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnGiven && !AbilitySpec.IsActive())
+	{
+		TryActivateAbility(AbilitySpec.Handle);
+	}
 }

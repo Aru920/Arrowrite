@@ -13,19 +13,5 @@ void UCharacterStartupData::GiveToAbilitySystemComponent(UBaseAbilitySystemCompo
 	}
 
 	AbilitySystemComponent->GiveStartupAbilities(StartupAbilities, AbilityLevel);
-
-	for (const TSubclassOf<UGameplayEffect>& EffectClass : StartupGameplayEffects)
-	{
-		if (!EffectClass)
-		{
-			continue;
-		}
-
-		const UGameplayEffect* EffectCDO = EffectClass->GetDefaultObject<UGameplayEffect>();
-		AbilitySystemComponent->ApplyGameplayEffectToSelf(
-			EffectCDO,
-			AbilityLevel,
-			AbilitySystemComponent->MakeEffectContext()
-		);
-	}
+	AbilitySystemComponent->ApplyStartupGameplayEffects(StartupGameplayEffects, AbilityLevel);
 }
