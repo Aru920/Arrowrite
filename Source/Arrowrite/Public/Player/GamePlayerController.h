@@ -18,9 +18,15 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientRefreshLocalPawn(APawn* NewPawn);
 
+	UFUNCTION(Client, Reliable)
+	void ClientNotifyConfirmedHit();
+
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
 	void OnLocalPawnChanged(APawn* NewPawn);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void OnConfirmedHit();
 
 private:
 	void NotifyLocalPawnChanged(APawn* NewPawn);

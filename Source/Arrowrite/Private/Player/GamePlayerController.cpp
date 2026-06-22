@@ -21,6 +21,14 @@ void AGamePlayerController::ClientRefreshLocalPawn_Implementation(APawn* NewPawn
 	NotifyLocalPawnChanged(NewPawn ? NewPawn : GetPawn());
 }
 
+void AGamePlayerController::ClientNotifyConfirmedHit_Implementation()
+{
+	if (IsLocalController())
+	{
+		OnConfirmedHit();
+	}
+}
+
 void AGamePlayerController::NotifyLocalPawnChanged(APawn* NewPawn)
 {
 	if (IsLocalController())

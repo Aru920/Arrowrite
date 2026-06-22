@@ -14,6 +14,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "GameFramework/Character.h"
 #include "Engine/OverlapResult.h"
+#include "Player/GamePlayerController.h"
 #include "Projectiles/ArrowDataAsset.h"
 #include "Tags/GameplayTags.h"
 
@@ -257,6 +258,7 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 
 	if (bAppliedDamage)
 	{
+		NotifyHitConfirmed();
 		SendHitReactEvent(ImpactHit);
 	}
 }
@@ -384,6 +386,35 @@ bool AArrowProjectile::ApplyDamageToHitActor(const FHitResult& Hit)
 
 	const FActiveGameplayEffectHandle ActiveEffectHandle = SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 	return ActiveEffectHandle.WasSuccessfullyApplied();
+}
+
+void AArrowProjectile::NotifyHitConfirmed() const
+{
+	AController* SourceController = GetInstigatorController();
+	if (!SourceController)
+	{
+		if (const APawn* InstigatorPawn = GetInstigator())
+		{
+			SourceController = InstigatorPawn->GetController();
+		}
+	}
+
+	if (!SourceController)
+	{
+		if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+		{
+			SourceController = OwnerPawn->GetController();
+		}
+		else
+		{
+			SourceController = Cast<AController>(GetOwner());
+		}
+	}
+
+	if (AGamePlayerController* PlayerController = Cast<AGamePlayerController>(SourceController))
+	{
+		PlayerController->ClientNotifyConfirmedHit();
+	}
 }
 
 bool AArrowProjectile::ApplyStatusEffectToHitActor(const FHitResult& Hit)

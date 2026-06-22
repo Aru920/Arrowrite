@@ -6,6 +6,7 @@
 #include "AbilitySystem/Player/PlayerAttributeSet.h"
 #include "Character/Player/PlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "Player/GamePlayerController.h"
 #include "Player/GamePlayerState.h"
 #include "Player/PlayerEquipmentComponent.h"
@@ -39,10 +40,21 @@ APlayerCharacter* UPlayerGameplayAbility::GetPlayerCharacterFromActorInfo() cons
 	return Cast<APlayerCharacter>(GetAvatarActorFromActorInfo());
 }
 
-AGamePlayerController* UPlayerGameplayAbility::GetGamePlayerControllerFromActorInfo() const
+APlayerController* UPlayerGameplayAbility::GetPlayerControllerFromActorInfo() const
 {
 	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
-	return ActorInfo ? Cast<AGamePlayerController>(ActorInfo->PlayerController.Get()) : nullptr;
+	if (APlayerController* PlayerController = ActorInfo ? Cast<APlayerController>(ActorInfo->PlayerController.Get()) : nullptr)
+	{
+		return PlayerController;
+	}
+
+	const APlayerCharacter* PlayerCharacter = GetPlayerCharacterFromActorInfo();
+	return PlayerCharacter ? Cast<APlayerController>(PlayerCharacter->GetController()) : nullptr;
+}
+
+AGamePlayerController* UPlayerGameplayAbility::GetGamePlayerControllerFromActorInfo() const
+{
+	return Cast<AGamePlayerController>(GetPlayerControllerFromActorInfo());
 }
 
 USkeletalMeshComponent* UPlayerGameplayAbility::GetPlayerMeshFromActorInfo() const

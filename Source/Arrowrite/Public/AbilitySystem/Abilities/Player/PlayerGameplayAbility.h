@@ -7,6 +7,7 @@
 #include "PlayerGameplayAbility.generated.h"
 
 class AGamePlayerController;
+class APlayerController;
 class APlayerCharacter;
 class ABaseWeapon;
 class UPlayerAbilitySystemComponent;
@@ -31,6 +32,9 @@ protected:
 
 	UFUNCTION(BlueprintPure, Category = "Ability|Player")
 	APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "Ability|Player")
+	APlayerController* GetPlayerControllerFromActorInfo() const;
 
 	UFUNCTION(BlueprintPure, Category = "Ability|Player")
 	AGamePlayerController* GetGamePlayerControllerFromActorInfo() const;

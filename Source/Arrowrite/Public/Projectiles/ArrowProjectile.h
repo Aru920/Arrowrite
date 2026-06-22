@@ -67,6 +67,7 @@ protected:
 	void StickArrowToImpact(const FHitResult& Hit, const FVector& ImpactDirection);
 	bool ApplyDamageToHitActor(const FHitResult& Hit);
 	bool ApplyStatusEffectToHitActor(const FHitResult& Hit);
+	void NotifyHitConfirmed() const;
 	void SendHitReactEvent(const FHitResult& Hit) const;
 	UAbilitySystemComponent* GetSourceAbilitySystemComponent() const;
 	void ConfigureProjectileCollision() const;
