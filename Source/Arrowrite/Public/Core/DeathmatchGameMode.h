@@ -7,6 +7,7 @@
 #include "DeathmatchGameMode.generated.h"
 
 class AController;
+class APlayerController;
 
 UCLASS()
 class ARROWRITE_API ADeathmatchGameMode : public AGameModeBase
@@ -17,6 +18,8 @@ public:
 	ADeathmatchGameMode();
 
 	virtual void BeginPlay() override;
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void Logout(AController* Exiting) override;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Deathmatch")
 	void RecordPlayerDeath(AController* VictimController, AController* KillerController);
@@ -29,6 +32,7 @@ protected:
 	void StartDeathmatch();
 	void FinishDeathmatch();
 	void HandleMatchTimerTick();
+	void RefreshScoreboardState();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch", meta = (ClampMin = "0"))
 	int32 MatchDurationSeconds = 600;

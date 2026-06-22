@@ -99,6 +99,7 @@ void AGamePlayerState::SetKillCount(int32 NewKillCount)
 	KillCount = NewKillCount;
 	SetScore(static_cast<float>(KillCount));
 	OnKillCountChanged.Broadcast(KillCount, OldKillCount);
+	ForceNetUpdate();
 }
 
 void AGamePlayerState::SetDeathCount(int32 NewDeathCount)
@@ -112,4 +113,5 @@ void AGamePlayerState::SetDeathCount(int32 NewDeathCount)
 	const int32 OldDeathCount = DeathCount;
 	DeathCount = NewDeathCount;
 	OnDeathCountChanged.Broadcast(DeathCount, OldDeathCount);
+	ForceNetUpdate();
 }

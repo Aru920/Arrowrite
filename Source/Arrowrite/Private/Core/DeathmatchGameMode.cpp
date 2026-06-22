@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "TimerManager.h"
 #include "Player/GamePlayerController.h"
@@ -29,6 +30,22 @@ void ADeathmatchGameMode::BeginPlay()
 	{
 		StartDeathmatch();
 	}
+}
+
+void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+
+	RefreshScoreboardState();
+	GetWorldTimerManager().SetTimerForNextTick(this, &ThisClass::RefreshScoreboardState);
+}
+
+void ADeathmatchGameMode::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+
+	RefreshScoreboardState();
+	GetWorldTimerManager().SetTimerForNextTick(this, &ThisClass::RefreshScoreboardState);
 }
 
 void ADeathmatchGameMode::RecordPlayerDeath(AController* VictimController, AController* KillerController)
@@ -59,6 +76,7 @@ void ADeathmatchGameMode::RecordPlayerDeath(AController* VictimController, ACont
 	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
 	{
 		DeathmatchGameState->PushKillFeedEntry(KillerPlayerState, VictimPlayerState);
+		DeathmatchGameState->NotifyScoreboardChanged();
 	}
 }
 
@@ -164,5 +182,13 @@ void ADeathmatchGameMode::HandleMatchTimerTick()
 	if (NewRemainingTime <= 0)
 	{
 		FinishDeathmatch();
+	}
+}
+
+void ADeathmatchGameMode::RefreshScoreboardState()
+{
+	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
+	{
+		DeathmatchGameState->NotifyScoreboardChanged();
 	}
 }
