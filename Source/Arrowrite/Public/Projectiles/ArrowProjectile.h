@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/NetSerialization.h"
 #include "GameFramework/Actor.h"
 #include "ArrowProjectile.generated.h"
 
@@ -24,6 +25,7 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void OnRep_ReplicatedMovement() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Projectile", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	void LaunchArrow(FVector LaunchDirection, float Intensity);
@@ -76,12 +78,24 @@ protected:
 	void CollectInitialIgnoredActors();
 	FVector GetArrowTipWorldLocation() const;
 	bool ShouldIgnoreImpactActor(const AActor* HitActor) const;
+	void StartLaunchVisuals();
+	void ApplyLaunchMovement(const FVector& LaunchVelocity);
+	void SimulateReplicatedLaunch();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Projectile")
 	void OnArrowImpact(const FHitResult& Hit);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Projectile")
 	void OnArrowLaunched();
+
+	UFUNCTION()
+	void OnRep_ArrowData();
+
+	UFUNCTION()
+	void OnRep_IsLaunched();
+
+	UFUNCTION()
+	void OnRep_LaunchVelocity();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<USceneComponent> SceneRoot;
@@ -101,7 +115,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Arrow")
+	UPROPERTY(EditDefaultsOnly, ReplicatedUsing = OnRep_ArrowData, BlueprintReadOnly, Category = "Projectile|Arrow")
 	TObjectPtr<UArrowDataAsset> ArrowData;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Impact")
@@ -131,8 +145,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Launch", meta = (ClampMin = "0.0"))
 	float ArrowGravityScale = 0.8f;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsLaunched)
 	bool bIsLaunched = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_LaunchVelocity)
+	FVector_NetQuantize10 ReplicatedLaunchVelocity;
+
 	bool bHasImpacted = false;
+	bool bLaunchVisualsStarted = false;
+	bool bReplicatedLaunchMovementStarted = false;
 	bool bHasLastTraceLocation = false;
 	FVector LastTraceLocation = FVector::ZeroVector;
 	TArray<TWeakObjectPtr<AActor>> ImpactIgnoredActors;

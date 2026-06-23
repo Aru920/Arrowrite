@@ -24,7 +24,7 @@ void UPlayerEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 
 void UPlayerEquipmentComponent::RegisterEquippedWeapon(ABaseWeapon* Weapon)
 {
-	if (!GetOwner() || !GetOwner()->HasAuthority() || !Weapon)
+	if (!GetOwner() || !GetOwner()->HasAuthority() || !IsValid(Weapon))
 	{
 		return;
 	}
@@ -67,7 +67,10 @@ void UPlayerEquipmentComponent::DestroyCarriedWeapons()
 
 	for (FCarriedWeaponEntry& CarriedWeapon : CarriedWeapons)
 	{
-		if (ABaseWeapon* Weapon = CarriedWeapon.Weapon.Get())
+		ABaseWeapon* Weapon = CarriedWeapon.Weapon.Get();
+		CarriedWeapon.Weapon = nullptr;
+
+		if (IsValid(Weapon))
 		{
 			Weapon->Destroy();
 		}
@@ -92,7 +95,8 @@ ABaseWeapon* UPlayerEquipmentComponent::GetWeaponByTag(FGameplayTag WeaponTag) c
 
 	if (FoundEntry)
 	{
-		return FoundEntry->Weapon.Get();
+		ABaseWeapon* FoundWeapon = FoundEntry->Weapon.Get();
+		return IsValid(FoundWeapon) ? FoundWeapon : nullptr;
 	}
 
 	return nullptr;

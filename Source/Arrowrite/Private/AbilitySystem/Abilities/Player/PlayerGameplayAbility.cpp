@@ -57,6 +57,38 @@ AGamePlayerController* UPlayerGameplayAbility::GetGamePlayerControllerFromActorI
 	return Cast<AGamePlayerController>(GetPlayerControllerFromActorInfo());
 }
 
+AGamePlayerController* UPlayerGameplayAbility::GetLocalGamePlayerControllerFromActorInfo() const
+{
+	AGamePlayerController* PlayerController = GetGamePlayerControllerFromActorInfo();
+	return PlayerController && PlayerController->IsLocalController() ? PlayerController : nullptr;
+}
+
+bool UPlayerGameplayAbility::CanUseLocalPlayerWidgets() const
+{
+	return GetLocalGamePlayerControllerFromActorInfo() != nullptr;
+}
+
+void UPlayerGameplayAbility::SetCrosshairVisible(bool bShouldBeVisible) const
+{
+	if (AGamePlayerController* PlayerController = GetGamePlayerControllerFromActorInfo())
+	{
+		PlayerController->SetCrosshairVisible(bShouldBeVisible);
+	}
+}
+
+void UPlayerGameplayAbility::SetBowAimingState(bool bShouldAim) const
+{
+	if (APlayerCharacter* PlayerCharacter = GetPlayerCharacterFromActorInfo())
+	{
+		PlayerCharacter->SetBowAimPoseActive(bShouldAim);
+	}
+
+	if (ABaseWeapon* CurrentWeapon = GetCurrentWeaponFromActorInfo())
+	{
+		CurrentWeapon->SetWeaponAimPoseActive(bShouldAim);
+	}
+}
+
 USkeletalMeshComponent* UPlayerGameplayAbility::GetPlayerMeshFromActorInfo() const
 {
 	const APlayerCharacter* PlayerCharacter = GetPlayerCharacterFromActorInfo();
@@ -72,5 +104,6 @@ UPlayerEquipmentComponent* UPlayerGameplayAbility::GetPlayerEquipmentComponentFr
 ABaseWeapon* UPlayerGameplayAbility::GetCurrentWeaponFromActorInfo() const
 {
 	const UPlayerEquipmentComponent* EquipmentComponent = GetPlayerEquipmentComponentFromActorInfo();
-	return EquipmentComponent ? EquipmentComponent->GetCurrentWeapon() : nullptr;
+	ABaseWeapon* CurrentWeapon = EquipmentComponent ? EquipmentComponent->GetCurrentWeapon() : nullptr;
+	return IsValid(CurrentWeapon) ? CurrentWeapon : nullptr;
 }

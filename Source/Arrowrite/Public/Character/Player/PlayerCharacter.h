@@ -84,6 +84,7 @@ private:
 	void AddInputMappingContextLocal(UInputMappingContext* MappingContext, int32 Priority) const;
 	void RemoveInputMappingContextLocal(UInputMappingContext* MappingContext) const;
 	void ApplyBowAimPoseActive();
+	void ApplyAimingGameplayTag();
 	void SetDeathState(bool bNewDeathState);
 	void ApplyDeathState();
 	void InitAbilityActorInfo();

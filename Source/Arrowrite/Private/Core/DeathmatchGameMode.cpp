@@ -44,6 +44,11 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
 
+	if (const UWorld* World = GetWorld(); !World || World->bIsTearingDown)
+	{
+		return;
+	}
+
 	RefreshScoreboardState();
 	GetWorldTimerManager().SetTimerForNextTick(this, &ThisClass::RefreshScoreboardState);
 }
@@ -64,14 +69,18 @@ void ADeathmatchGameMode::RecordPlayerDeath(AController* VictimController, ACont
 	VictimPlayerState->AddDeath();
 
 	AGamePlayerState* KillerPlayerState = nullptr;
+	FString KillerName = TEXT("World");
 	if (KillerController && KillerController != VictimController)
 	{
 		KillerPlayerState = KillerController->GetPlayerState<AGamePlayerState>();
 		if (KillerPlayerState)
 		{
 			KillerPlayerState->AddKill();
+			KillerName = KillerPlayerState->GetPlayerName();
 		}
 	}
+
+	PendingRespawnKillerNames.Add(VictimController, KillerName);
 
 	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
 	{
@@ -95,6 +104,12 @@ void ADeathmatchGameMode::RequestPlayerRespawn(AController* Controller, float Re
 
 	PendingRespawnControllers.Add(ControllerKey);
 
+	const FString KillerName = PendingRespawnKillerNames.FindRef(ControllerKey);
+	if (AGamePlayerController* GamePlayerController = Cast<AGamePlayerController>(Controller))
+	{
+		GamePlayerController->ClientStartRespawnCountdown(KillerName.IsEmpty() ? TEXT("World") : KillerName, RespawnDelay);
+	}
+
 	if (RespawnDelay <= 0.0f)
 	{
 		RespawnPlayer(Controller);
@@ -115,6 +130,7 @@ void ADeathmatchGameMode::RespawnPlayer(AController* Controller)
 	}
 
 	PendingRespawnControllers.Remove(TWeakObjectPtr<AController>(Controller));
+	PendingRespawnKillerNames.Remove(TWeakObjectPtr<AController>(Controller));
 
 	if (AGamePlayerState* GamePlayerState = Controller->GetPlayerState<AGamePlayerState>())
 	{
@@ -187,6 +203,11 @@ void ADeathmatchGameMode::HandleMatchTimerTick()
 
 void ADeathmatchGameMode::RefreshScoreboardState()
 {
+	if (const UWorld* World = GetWorld(); !World || World->bIsTearingDown)
+	{
+		return;
+	}
+
 	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
 	{
 		DeathmatchGameState->NotifyScoreboardChanged();

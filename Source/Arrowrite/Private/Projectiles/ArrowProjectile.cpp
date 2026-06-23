@@ -14,6 +14,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "GameFramework/Character.h"
 #include "Engine/OverlapResult.h"
+#include "Net/UnrealNetwork.h"
 #include "Player/GamePlayerController.h"
 #include "Projectiles/ArrowDataAsset.h"
 #include "Tags/GameplayTags.h"
@@ -29,6 +30,9 @@ AArrowProjectile::AArrowProjectile()
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	bReplicates = true;
 	SetReplicateMovement(true);
+	SetNetUpdateFrequency(100.0f);
+	SetMinNetUpdateFrequency(30.0f);
+	NetPriority = 3.0f;
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
@@ -59,7 +63,7 @@ AArrowProjectile::AArrowProjectile()
 	LaunchDirectionArrow->bHiddenInGame = true;
 
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-	ProjectileMovement->UpdatedComponent = CollisionComponent;
+	ProjectileMovement->UpdatedComponent = SceneRoot;
 	ProjectileMovement->InitialSpeed = 0.0f;
 	ProjectileMovement->MaxSpeed = MaxLaunchSpeed;
 	ProjectileMovement->ProjectileGravityScale = ArrowGravityScale;
@@ -102,6 +106,15 @@ void AArrowProjectile::OnRep_ReplicatedMovement()
 	Super::OnRep_ReplicatedMovement();
 }
 
+void AArrowProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AArrowProjectile, ArrowData);
+	DOREPLIFETIME(AArrowProjectile, bIsLaunched);
+	DOREPLIFETIME(AArrowProjectile, ReplicatedLaunchVelocity);
+}
+
 void AArrowProjectile::BeginPlay()
 {
 	Super::BeginPlay();
@@ -122,38 +135,113 @@ void AArrowProjectile::LaunchArrow(FVector LaunchDirection, float Intensity)
 	const FVector Direction = LaunchDirection.IsNearlyZero() ? GetActorForwardVector() : LaunchDirection.GetSafeNormal();
 	const float ClampedIntensity = FMath::Clamp(Intensity, 0.0f, 1.0f);
 	const float LaunchSpeed = FMath::Lerp(MinLaunchSpeed, MaxLaunchSpeed, ClampedIntensity);
+	const FVector LaunchVelocity = Direction * LaunchSpeed;
 
+	ReplicatedLaunchVelocity = FVector_NetQuantize10(LaunchVelocity);
 	bIsLaunched = true;
 	bHasImpacted = false;
+	bLaunchVisualsStarted = false;
+	bReplicatedLaunchMovementStarted = false;
 	bHasLastTraceLocation = true;
 	LastTraceLocation = GetArrowTipWorldLocation();
 	CollectInitialIgnoredActors();
-	SetActorTickEnabled(true);
-	SetActorRotation(Direction.Rotation());
+	ApplyLaunchMovement(LaunchVelocity);
 
-	if (CollisionComponent)
-	{
-		ConfigureProjectileCollision();
-		CollisionComponent->IgnoreActorWhenMoving(this, true);
-		for (const TWeakObjectPtr<AActor>& IgnoredActor : ImpactIgnoredActors)
-		{
-			CollisionComponent->IgnoreActorWhenMoving(IgnoredActor.Get(), true);
-		}
-	}
-
-	ProjectileMovement->SetUpdatedComponent(CollisionComponent);
-	ProjectileMovement->ProjectileGravityScale = ArrowGravityScale;
-	ProjectileMovement->InitialSpeed = LaunchSpeed;
-	ProjectileMovement->MaxSpeed = FMath::Max(MaxLaunchSpeed, LaunchSpeed);
-	ProjectileMovement->Velocity = Direction * LaunchSpeed;
-	ProjectileMovement->Activate(true);
-
-	OnArrowLaunched();
+	StartLaunchVisuals();
+	ForceNetUpdate();
 }
 
 void AArrowProjectile::SetArrowData(UArrowDataAsset* NewArrowData)
 {
 	ArrowData = NewArrowData;
+	if (HasAuthority())
+	{
+		ForceNetUpdate();
+	}
+}
+
+void AArrowProjectile::OnRep_ArrowData()
+{
+	SimulateReplicatedLaunch();
+	StartLaunchVisuals();
+}
+
+void AArrowProjectile::OnRep_IsLaunched()
+{
+	SimulateReplicatedLaunch();
+	StartLaunchVisuals();
+}
+
+void AArrowProjectile::OnRep_LaunchVelocity()
+{
+	SimulateReplicatedLaunch();
+}
+
+void AArrowProjectile::StartLaunchVisuals()
+{
+	if (bLaunchVisualsStarted || !bIsLaunched || bHasImpacted)
+	{
+		return;
+	}
+
+	if (!ArrowData && !HasAuthority())
+	{
+		return;
+	}
+
+	bLaunchVisualsStarted = true;
+	OnArrowLaunched();
+}
+
+void AArrowProjectile::ApplyLaunchMovement(const FVector& LaunchVelocity)
+{
+	if (!ProjectileMovement || LaunchVelocity.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FVector Direction = LaunchVelocity.GetSafeNormal();
+	const float LaunchSpeed = LaunchVelocity.Size();
+
+	bHasLastTraceLocation = true;
+	LastTraceLocation = GetArrowTipWorldLocation();
+	SetActorTickEnabled(true);
+	SetActorRotation(Direction.Rotation());
+
+	if (CollisionComponent)
+	{
+		if (HasAuthority())
+		{
+			ConfigureProjectileCollision();
+			CollisionComponent->IgnoreActorWhenMoving(this, true);
+			for (const TWeakObjectPtr<AActor>& IgnoredActor : ImpactIgnoredActors)
+			{
+				CollisionComponent->IgnoreActorWhenMoving(IgnoredActor.Get(), true);
+			}
+		}
+		else
+		{
+			CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+	}
+
+	ProjectileMovement->SetUpdatedComponent(SceneRoot);
+	ProjectileMovement->ProjectileGravityScale = ArrowGravityScale;
+	ProjectileMovement->InitialSpeed = LaunchSpeed;
+	ProjectileMovement->MaxSpeed = FMath::Max(MaxLaunchSpeed, LaunchSpeed);
+	ProjectileMovement->Velocity = LaunchVelocity;
+	ProjectileMovement->Activate(true);
+}
+
+void AArrowProjectile::SimulateReplicatedLaunch()
+{
+	if (HasAuthority() || !bIsLaunched || bHasImpacted || bReplicatedLaunchMovementStarted || ReplicatedLaunchVelocity.IsNearlyZero())
+	{
+		return;
+	}
+
+	bReplicatedLaunchMovementStarted = true;
+	ApplyLaunchMovement(FVector(ReplicatedLaunchVelocity));
 }
 
 void AArrowProjectile::HandleImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
@@ -266,6 +354,7 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 void AArrowProjectile::MulticastStickArrow_Implementation(const FHitResult& Hit, FVector_NetQuantize ActorLocation, FRotator ActorRotation, FVector_NetQuantize MeshLocation, FRotator MeshRotation)
 {
 	bHasImpacted = true;
+	bReplicatedLaunchMovementStarted = false;
 	StopProjectileMovement();
 
 	if (CollisionComponent)

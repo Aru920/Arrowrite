@@ -4,6 +4,7 @@
 
 #include "Animation/Weapons/WeaponAnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
 
 ABaseWeapon::ABaseWeapon()
@@ -49,7 +50,8 @@ void ABaseWeapon::SetWeaponAimPoseActive(bool bShouldUseAimPose)
 	bWeaponAimPoseActive = bShouldUseAimPose;
 	ApplyWeaponAimPoseActive();
 
-	if (!HasAuthority())
+	const APawn* OwnerPawn = OwningPawn ? OwningPawn.Get() : Cast<APawn>(GetOwner());
+	if (!HasAuthority() && OwnerPawn && OwnerPawn->IsLocallyControlled())
 	{
 		ServerSetWeaponAimPoseActive(bShouldUseAimPose);
 	}
@@ -84,7 +86,8 @@ void ABaseWeapon::SetWeaponAnimState(EWeaponAnimState NewAnimState)
 	WeaponAnimState = NewAnimState;
 	ApplyWeaponAnimState();
 
-	if (!HasAuthority())
+	const APawn* OwnerPawn = OwningPawn ? OwningPawn.Get() : Cast<APawn>(GetOwner());
+	if (!HasAuthority() && OwnerPawn && OwnerPawn->IsLocallyControlled())
 	{
 		ServerSetWeaponAnimState(NewAnimState);
 	}

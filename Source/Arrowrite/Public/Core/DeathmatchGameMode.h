@@ -42,5 +42,6 @@ protected:
 
 private:
 	TSet<TWeakObjectPtr<AController>> PendingRespawnControllers;
+	TMap<TWeakObjectPtr<AController>, FString> PendingRespawnKillerNames;
 	FTimerHandle MatchTimerHandle;
 };

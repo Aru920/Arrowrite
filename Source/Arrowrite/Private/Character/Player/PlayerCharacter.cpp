@@ -21,6 +21,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Player/PlayerEquipmentComponent.h"
 #include "Player/GamePlayerState.h"
+#include "Tags/GameplayTags.h"
 #include "UI/PlayerCombatUIComponent.h"
 
 APlayerCharacter::APlayerCharacter()
@@ -132,14 +133,16 @@ void APlayerCharacter::SetBowAimPoseActive(bool bShouldUseBowAimPose)
 {
 	if (bBowAimPoseActive == bShouldUseBowAimPose)
 	{
+		ApplyAimingGameplayTag();
 		ApplyBowAimPoseActive();
 		return;
 	}
 
 	bBowAimPoseActive = bShouldUseBowAimPose;
+	ApplyAimingGameplayTag();
 	ApplyBowAimPoseActive();
 
-	if (!HasAuthority())
+	if (!HasAuthority() && IsLocallyControlled())
 	{
 		ServerSetBowAimPoseActive(bShouldUseBowAimPose);
 	}
@@ -176,9 +179,19 @@ void APlayerCharacter::RequestRespawn(float RespawnDelay)
 
 void APlayerCharacter::ApplyBowAimPoseActive()
 {
+	SetAimingRotationMode(bBowAimPoseActive);
+
 	if (UPlayerAnimInstance* PlayerAnimInstance = Cast<UPlayerAnimInstance>(GetMesh() ? GetMesh()->GetAnimInstance() : nullptr))
 	{
 		PlayerAnimInstance->SetBowAimPoseActive(bBowAimPoseActive);
+	}
+}
+
+void APlayerCharacter::ApplyAimingGameplayTag()
+{
+	if (UAbilitySystemComponent* CurrentAbilitySystemComponent = GetAbilitySystemComponent())
+	{
+		CurrentAbilitySystemComponent->SetLooseGameplayTagCount(ArrowriteGameplayTags::State_Aiming, bBowAimPoseActive ? 1 : 0);
 	}
 }
 
@@ -214,6 +227,7 @@ void APlayerCharacter::ApplyDeathState()
 	{
 		bIsSprinting = false;
 		bBowAimPoseActive = false;
+		ApplyAimingGameplayTag();
 		ApplyBowAimPoseActive();
 
 		if (MovementComponent)
@@ -489,6 +503,7 @@ void APlayerCharacter::ServerRequestRespawn_Implementation(float RespawnDelay)
 
 void APlayerCharacter::OnRep_BowAimPoseActive()
 {
+	ApplyAimingGameplayTag();
 	ApplyBowAimPoseActive();
 }
 

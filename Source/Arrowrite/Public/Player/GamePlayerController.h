@@ -21,12 +21,27 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientNotifyConfirmedHit();
 
+	UFUNCTION(Client, Reliable)
+	void ClientStartRespawnCountdown(const FString& KillerName, float RespawnDelay);
+
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void SetCrosshairVisible(bool bShouldBeVisible);
+
+	UFUNCTION(Client, Reliable)
+	void ClientSetCrosshairVisible(bool bShouldBeVisible);
+
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
 	void OnLocalPawnChanged(APawn* NewPawn);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
 	void OnConfirmedHit();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void OnRespawnCountdownStarted(const FString& KillerName, float RespawnDelay);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void OnCrosshairVisibilityChanged(bool bShouldBeVisible);
 
 private:
 	void NotifyLocalPawnChanged(APawn* NewPawn);

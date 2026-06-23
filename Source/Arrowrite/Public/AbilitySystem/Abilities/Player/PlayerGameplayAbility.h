@@ -39,6 +39,18 @@ protected:
 	UFUNCTION(BlueprintPure, Category = "Ability|Player")
 	AGamePlayerController* GetGamePlayerControllerFromActorInfo() const;
 
+	UFUNCTION(BlueprintPure, Category = "Ability|Player|UI")
+	AGamePlayerController* GetLocalGamePlayerControllerFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "Ability|Player|UI")
+	bool CanUseLocalPlayerWidgets() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Player|UI")
+	void SetCrosshairVisible(bool bShouldBeVisible) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Player|Bow")
+	void SetBowAimingState(bool bShouldAim) const;
+
 	UFUNCTION(BlueprintPure, Category = "Ability|Player")
 	USkeletalMeshComponent* GetPlayerMeshFromActorInfo() const;
 

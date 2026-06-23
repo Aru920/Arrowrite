@@ -2,6 +2,7 @@
 
 #include "Core/DeathmatchGameState.h"
 
+#include "Engine/World.h"
 #include "Player/GamePlayerState.h"
 #include "Net/UnrealNetwork.h"
 
@@ -88,6 +89,11 @@ void ADeathmatchGameState::PushKillFeedEntry(APlayerState* KillerPlayerState, AP
 
 void ADeathmatchGameState::NotifyScoreboardChanged()
 {
+	if (const UWorld* World = GetWorld(); !World || World->bIsTearingDown)
+	{
+		return;
+	}
+
 	RebuildScoreboardEntries();
 }
 
@@ -111,6 +117,11 @@ void ADeathmatchGameState::OnRep_LatestKillFeedEntry()
 
 void ADeathmatchGameState::OnRep_ScoreboardEntries()
 {
+	if (const UWorld* World = GetWorld(); !World || World->bIsTearingDown)
+	{
+		return;
+	}
+
 	OnScoreboardChanged.Broadcast();
 }
 
@@ -135,6 +146,11 @@ void ADeathmatchGameState::RebuildScoreboardEntries()
 		}
 
 		ScoreboardEntries.Add(Entry);
+	}
+
+	if (const UWorld* World = GetWorld(); !World || World->bIsTearingDown)
+	{
+		return;
 	}
 
 	OnScoreboardChanged.Broadcast();
