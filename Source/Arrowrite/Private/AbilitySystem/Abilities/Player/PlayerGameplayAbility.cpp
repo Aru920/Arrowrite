@@ -10,6 +10,8 @@
 #include "Player/GamePlayerController.h"
 #include "Player/GamePlayerState.h"
 #include "Player/PlayerEquipmentComponent.h"
+#include "Projectiles/ArrowProjectile.h"
+#include "Projectiles/ArrowDataAsset.h"
 #include "Weapons/BaseWeapon.h"
 
 UPlayerAbilitySystemComponent* UPlayerGameplayAbility::GetPlayerAbilitySystemComponentFromActorInfo() const
@@ -99,6 +101,22 @@ UPlayerEquipmentComponent* UPlayerGameplayAbility::GetPlayerEquipmentComponentFr
 {
 	const APlayerCharacter* PlayerCharacter = GetPlayerCharacterFromActorInfo();
 	return PlayerCharacter ? PlayerCharacter->GetEquipmentComponent() : nullptr;
+}
+
+UArrowDataAsset* UPlayerGameplayAbility::GetSelectedArrowDataFromActorInfo() const
+{
+	const UPlayerEquipmentComponent* EquipmentComponent = GetPlayerEquipmentComponentFromActorInfo();
+	return EquipmentComponent ? EquipmentComponent->GetSelectedArrowData() : nullptr;
+}
+
+void UPlayerGameplayAbility::ApplySelectedArrowDataToProjectile(AArrowProjectile* Projectile) const
+{
+	if (!IsValid(Projectile))
+	{
+		return;
+	}
+
+	Projectile->SetArrowData(GetSelectedArrowDataFromActorInfo());
 }
 
 ABaseWeapon* UPlayerGameplayAbility::GetCurrentWeaponFromActorInfo() const

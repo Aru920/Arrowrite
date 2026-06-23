@@ -177,6 +177,16 @@ void APlayerCharacter::RequestRespawn(float RespawnDelay)
 	}
 }
 
+void APlayerCharacter::ShowDamageNumber(float DamageAmount, FGameplayTag DamageTag, AActor* DamageSource)
+{
+	if (!HasAuthority() || DamageAmount <= 0.0f)
+	{
+		return;
+	}
+
+	MulticastShowDamageNumber(DamageAmount, DamageTag, DamageSource);
+}
+
 void APlayerCharacter::ApplyBowAimPoseActive()
 {
 	SetAimingRotationMode(bBowAimPoseActive);
@@ -499,6 +509,16 @@ void APlayerCharacter::ServerSetDeathState_Implementation(bool bNewDeathState)
 void APlayerCharacter::ServerRequestRespawn_Implementation(float RespawnDelay)
 {
 	RequestRespawn(RespawnDelay);
+}
+
+void APlayerCharacter::MulticastShowDamageNumber_Implementation(float DamageAmount, FGameplayTag DamageTag, AActor* DamageSource)
+{
+	if (DamageAmount <= 0.0f)
+	{
+		return;
+	}
+
+	OnDamageNumberReceived(DamageAmount, DamageTag, DamageSource);
 }
 
 void APlayerCharacter::OnRep_BowAimPoseActive()

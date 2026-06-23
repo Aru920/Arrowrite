@@ -9,7 +9,9 @@
 class AGamePlayerController;
 class APlayerController;
 class APlayerCharacter;
+class AArrowProjectile;
 class ABaseWeapon;
+class UArrowDataAsset;
 class UPlayerAbilitySystemComponent;
 class UPlayerAttributeSet;
 class UPlayerEquipmentComponent;
@@ -56,6 +58,12 @@ protected:
 
 	UFUNCTION(BlueprintPure, Category = "Ability|Player")
 	UPlayerEquipmentComponent* GetPlayerEquipmentComponentFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "Ability|Player|Arrows")
+	UArrowDataAsset* GetSelectedArrowDataFromActorInfo() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Player|Arrows")
+	void ApplySelectedArrowDataToProjectile(AArrowProjectile* Projectile) const;
 
 	UFUNCTION(BlueprintPure, Category = "Ability|Player")
 	ABaseWeapon* GetCurrentWeaponFromActorInfo() const;

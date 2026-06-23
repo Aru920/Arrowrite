@@ -74,6 +74,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat|Death")
 	void RequestRespawn(float RespawnDelay = 3.0f);
 
+	UFUNCTION(BlueprintCallable, Category = "Combat|Damage")
+	void ShowDamageNumber(float DamageAmount, FGameplayTag DamageTag, AActor* DamageSource);
+
 	virtual UPlayerCombatUIComponent* GetPlayerCombatUIComponent_Implementation() const override { return PlayerCombatUIComponent; }
 
 protected:
@@ -113,6 +116,13 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRequestRespawn(float RespawnDelay);
+
+protected:
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastShowDamageNumber(float DamageAmount, FGameplayTag DamageTag, AActor* DamageSource);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Combat|Damage")
+	void OnDamageNumberReceived(float DamageAmount, FGameplayTag DamageTag, AActor* DamageSource);
 
 	UFUNCTION()
 	void OnRep_BowAimPoseActive();

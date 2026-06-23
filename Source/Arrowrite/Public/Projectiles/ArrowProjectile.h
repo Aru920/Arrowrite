@@ -61,7 +61,7 @@ protected:
 	void HandleProjectileStop(const FHitResult& ImpactResult);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastStickArrow(const FHitResult& Hit, FVector_NetQuantize ActorLocation, FRotator ActorRotation, FVector_NetQuantize MeshLocation, FRotator MeshRotation);
+	void MulticastStickArrow(const FHitResult& Hit, UArrowDataAsset* ImpactArrowData, FVector_NetQuantize ActorLocation, FRotator ActorRotation, FVector_NetQuantize MeshLocation, FRotator MeshRotation);
 
 	void ProcessImpact(const FHitResult& Hit);
 	void TraceForImpact();

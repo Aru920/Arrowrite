@@ -340,7 +340,7 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 	const FVector MeshLocation = ArrowMesh ? ArrowMesh->GetComponentLocation() : GetActorLocation();
 	const FRotator MeshRotation = ArrowMesh ? ArrowMesh->GetComponentRotation() : GetActorRotation();
 
-	MulticastStickArrow(ImpactHit, GetActorLocation(), GetActorRotation(), MeshLocation, MeshRotation);
+	MulticastStickArrow(ImpactHit, ArrowData, GetActorLocation(), GetActorRotation(), MeshLocation, MeshRotation);
 	const bool bAppliedDamage = ApplyDamageToHitActor(ImpactHit);
 	ApplyStatusEffectToHitActor(ImpactHit);
 
@@ -351,10 +351,15 @@ void AArrowProjectile::ProcessImpact(const FHitResult& Hit)
 	}
 }
 
-void AArrowProjectile::MulticastStickArrow_Implementation(const FHitResult& Hit, FVector_NetQuantize ActorLocation, FRotator ActorRotation, FVector_NetQuantize MeshLocation, FRotator MeshRotation)
+void AArrowProjectile::MulticastStickArrow_Implementation(const FHitResult& Hit, UArrowDataAsset* ImpactArrowData, FVector_NetQuantize ActorLocation, FRotator ActorRotation, FVector_NetQuantize MeshLocation, FRotator MeshRotation)
 {
 	bHasImpacted = true;
 	bReplicatedLaunchMovementStarted = false;
+	if (!ArrowData && ImpactArrowData)
+	{
+		ArrowData = ImpactArrowData;
+	}
+
 	StopProjectileMovement();
 
 	if (CollisionComponent)
@@ -380,7 +385,11 @@ void AArrowProjectile::MulticastStickArrow_Implementation(const FHitResult& Hit,
 	}
 
 	SetReplicateMovement(false);
-	OnArrowImpact(Hit);
+
+	if (ArrowData)
+	{
+		OnArrowImpact(Hit);
+	}
 }
 
 void AArrowProjectile::StopProjectileMovement()

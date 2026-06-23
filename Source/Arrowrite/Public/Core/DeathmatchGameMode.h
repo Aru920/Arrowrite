@@ -33,6 +33,7 @@ protected:
 	void FinishDeathmatch();
 	void HandleMatchTimerTick();
 	void RefreshScoreboardState();
+	void ClearPendingRespawn(AController* Controller, bool bClearTimer);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch", meta = (ClampMin = "0"))
 	int32 MatchDurationSeconds = 600;
@@ -43,5 +44,6 @@ protected:
 private:
 	TSet<TWeakObjectPtr<AController>> PendingRespawnControllers;
 	TMap<TWeakObjectPtr<AController>, FString> PendingRespawnKillerNames;
+	TMap<TWeakObjectPtr<AController>, FTimerHandle> PendingRespawnTimerHandles;
 	FTimerHandle MatchTimerHandle;
 };

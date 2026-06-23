@@ -44,6 +44,8 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
 
+	ClearPendingRespawn(Exiting, true);
+
 	if (const UWorld* World = GetWorld(); !World || World->bIsTearingDown)
 	{
 		return;
@@ -55,7 +57,7 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 
 void ADeathmatchGameMode::RecordPlayerDeath(AController* VictimController, AController* KillerController)
 {
-	if (!HasAuthority() || !VictimController)
+	if (!HasAuthority() || !IsValid(VictimController))
 	{
 		return;
 	}
@@ -91,10 +93,12 @@ void ADeathmatchGameMode::RecordPlayerDeath(AController* VictimController, ACont
 
 void ADeathmatchGameMode::RequestPlayerRespawn(AController* Controller, float RespawnDelay)
 {
-	if (!HasAuthority() || !Controller)
+	if (!HasAuthority() || !IsValid(Controller))
 	{
 		return;
 	}
+
+	RespawnDelay = FMath::Max(0.0f, RespawnDelay);
 
 	const TWeakObjectPtr<AController> ControllerKey(Controller);
 	if (PendingRespawnControllers.Contains(ControllerKey))
@@ -116,7 +120,7 @@ void ADeathmatchGameMode::RequestPlayerRespawn(AController* Controller, float Re
 		return;
 	}
 
-	FTimerHandle RespawnTimerHandle;
+	FTimerHandle& RespawnTimerHandle = PendingRespawnTimerHandles.FindOrAdd(ControllerKey);
 	FTimerDelegate RespawnDelegate;
 	RespawnDelegate.BindUObject(this, &ThisClass::RespawnPlayer, Controller);
 	GetWorldTimerManager().SetTimer(RespawnTimerHandle, RespawnDelegate, RespawnDelay, false);
@@ -124,13 +128,12 @@ void ADeathmatchGameMode::RequestPlayerRespawn(AController* Controller, float Re
 
 void ADeathmatchGameMode::RespawnPlayer(AController* Controller)
 {
-	if (!HasAuthority() || !Controller)
+	if (!HasAuthority() || !IsValid(Controller))
 	{
 		return;
 	}
 
-	PendingRespawnControllers.Remove(TWeakObjectPtr<AController>(Controller));
-	PendingRespawnKillerNames.Remove(TWeakObjectPtr<AController>(Controller));
+	ClearPendingRespawn(Controller, true);
 
 	if (AGamePlayerState* GamePlayerState = Controller->GetPlayerState<AGamePlayerState>())
 	{
@@ -157,6 +160,31 @@ void ADeathmatchGameMode::RespawnPlayer(AController* Controller)
 	{
 		GamePlayerController->ClientRefreshLocalPawn(Controller->GetPawn());
 	}
+}
+
+void ADeathmatchGameMode::ClearPendingRespawn(AController* Controller, bool bClearTimer)
+{
+	if (!Controller)
+	{
+		return;
+	}
+
+	const TWeakObjectPtr<AController> ControllerKey(Controller);
+
+	if (bClearTimer)
+	{
+		if (FTimerHandle* RespawnTimerHandle = PendingRespawnTimerHandles.Find(ControllerKey))
+		{
+			if (UWorld* World = GetWorld(); World && !World->bIsTearingDown)
+			{
+				World->GetTimerManager().ClearTimer(*RespawnTimerHandle);
+			}
+		}
+	}
+
+	PendingRespawnTimerHandles.Remove(ControllerKey);
+	PendingRespawnControllers.Remove(ControllerKey);
+	PendingRespawnKillerNames.Remove(ControllerKey);
 }
 
 void ADeathmatchGameMode::StartDeathmatch()

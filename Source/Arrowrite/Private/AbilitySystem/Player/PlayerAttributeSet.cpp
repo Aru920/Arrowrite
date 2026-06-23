@@ -4,12 +4,41 @@
 
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbilityTypes.h"
+#include "Character/Player/PlayerCharacter.h"
 #include "Core/DeathmatchGameMode.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 #include "Tags/GameplayTags.h"
+
+namespace
+{
+	FGameplayTag ResolveDamagePresentationTag(const UAbilitySystemComponent* TargetAbilitySystemComponent)
+	{
+		if (!TargetAbilitySystemComponent)
+		{
+			return FGameplayTag();
+		}
+
+		if (TargetAbilitySystemComponent->HasMatchingGameplayTag(ArrowriteGameplayTags::State_Burning))
+		{
+			return ArrowriteGameplayTags::State_Burning;
+		}
+
+		if (TargetAbilitySystemComponent->HasMatchingGameplayTag(ArrowriteGameplayTags::State_Poisoned))
+		{
+			return ArrowriteGameplayTags::State_Poisoned;
+		}
+
+		if (TargetAbilitySystemComponent->HasMatchingGameplayTag(ArrowriteGameplayTags::State_Frozen))
+		{
+			return ArrowriteGameplayTags::State_Frozen;
+		}
+
+		return FGameplayTag();
+	}
+}
 
 UPlayerAttributeSet::UPlayerAttributeSet()
 {
@@ -72,8 +101,6 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 				return;
 			}
 
-			OwningASC->AddLooseGameplayTag(ArrowriteGameplayTags::State_Dead);
-
 			AActor* TargetActor = OwningASC->GetAvatarActor();
 			APawn* VictimPawn = Cast<APawn>(TargetActor);
 			AController* VictimController = VictimPawn ? VictimPawn->GetController() : nullptr;
@@ -107,6 +134,7 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 			EventData.ContextHandle = Data.EffectSpec.GetContext();
 
 			OwningASC->HandleGameplayEvent(ArrowriteGameplayTags::Event_Player_Death, &EventData);
+			OwningASC->SetLooseGameplayTagCount(ArrowriteGameplayTags::State_Dead, 1);
 		}
 	};
 
@@ -136,7 +164,17 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 
 		if (DamageDone > 0.0f)
 		{
+			UAbilitySystemComponent* OwningASC = GetOwningAbilitySystemComponent();
+			AActor* TargetActor = OwningASC ? OwningASC->GetAvatarActor() : nullptr;
+			AActor* DamageSource = Data.EffectSpec.GetContext().GetOriginalInstigator();
+
 			SetHealth(FMath::Clamp(GetHealth() - DamageDone, 0.0f, GetMaxHealth()));
+
+			if (APlayerCharacter* TargetPlayerCharacter = Cast<APlayerCharacter>(TargetActor))
+			{
+				TargetPlayerCharacter->ShowDamageNumber(DamageDone, ResolveDamagePresentationTag(OwningASC), DamageSource);
+			}
+
 			HandleDeathIfHealthDepleted();
 		}
 	}
