@@ -31,12 +31,18 @@ protected:
 	void RespawnPlayer(AController* Controller);
 	void StartDeathmatch();
 	void FinishDeathmatch();
+	void ScheduleDeathmatchRestart();
+	void RestartDeathmatchRound();
 	void HandleMatchTimerTick();
 	void RefreshScoreboardState();
 	void ClearPendingRespawn(AController* Controller, bool bClearTimer);
+	void ClearAllPendingRespawns();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch", meta = (ClampMin = "0"))
 	int32 MatchDurationSeconds = 600;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch", meta = (ClampMin = "0.0"))
+	float MatchRestartDelaySeconds = 5.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch")
 	bool bAutoStartMatch = true;
@@ -46,4 +52,5 @@ private:
 	TMap<TWeakObjectPtr<AController>, FString> PendingRespawnKillerNames;
 	TMap<TWeakObjectPtr<AController>, FTimerHandle> PendingRespawnTimerHandles;
 	FTimerHandle MatchTimerHandle;
+	FTimerHandle MatchRestartTimerHandle;
 };

@@ -190,8 +190,26 @@ void ADeathmatchGameMode::ClearPendingRespawn(AController* Controller, bool bCle
 	PendingRespawnKillerNames.Remove(ControllerKey);
 }
 
+void ADeathmatchGameMode::ClearAllPendingRespawns()
+{
+	if (UWorld* World = GetWorld(); World && !World->bIsTearingDown)
+	{
+		for (TPair<TWeakObjectPtr<AController>, FTimerHandle>& RespawnTimerPair : PendingRespawnTimerHandles)
+		{
+			World->GetTimerManager().ClearTimer(RespawnTimerPair.Value);
+		}
+	}
+
+	PendingRespawnTimerHandles.Reset();
+	PendingRespawnControllers.Reset();
+	PendingRespawnKillerNames.Reset();
+}
+
 void ADeathmatchGameMode::StartDeathmatch()
 {
+	GetWorldTimerManager().ClearTimer(MatchRestartTimerHandle);
+	ClearAllPendingRespawns();
+
 	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
 	{
 		DeathmatchGameState->SetMatchResult(nullptr, 0, false);
@@ -211,6 +229,11 @@ void ADeathmatchGameMode::FinishDeathmatch()
 
 	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
 	{
+		if (DeathmatchGameState->GetDeathmatchPhase() == EDeathmatchPhase::MatchEnded)
+		{
+			return;
+		}
+
 		APlayerState* WinnerPlayerState = nullptr;
 		int32 WinningKills = 0;
 		int32 PlayersWithWinningKills = 0;
@@ -245,7 +268,75 @@ void ADeathmatchGameMode::FinishDeathmatch()
 		DeathmatchGameState->SetMatchResult(bWasTie ? nullptr : WinnerPlayerState, WinningKills, bWasTie);
 		DeathmatchGameState->SetRemainingMatchTime(0);
 		DeathmatchGameState->SetDeathmatchPhase(EDeathmatchPhase::MatchEnded);
+		ScheduleDeathmatchRestart();
 	}
+}
+
+void ADeathmatchGameMode::ScheduleDeathmatchRestart()
+{
+	UWorld* World = GetWorld();
+	if (!World || World->bIsTearingDown)
+	{
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(MatchRestartTimerHandle);
+
+	if (MatchRestartDelaySeconds <= 0.0f)
+	{
+		RestartDeathmatchRound();
+		return;
+	}
+
+	World->GetTimerManager().SetTimer(
+		MatchRestartTimerHandle,
+		this,
+		&ThisClass::RestartDeathmatchRound,
+		MatchRestartDelaySeconds,
+		false);
+}
+
+void ADeathmatchGameMode::RestartDeathmatchRound()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World || World->bIsTearingDown)
+	{
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(MatchRestartTimerHandle);
+	ClearAllPendingRespawns();
+
+	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
+	{
+		for (APlayerState* PlayerState : DeathmatchGameState->PlayerArray)
+		{
+			if (AGamePlayerState* GamePlayerState = Cast<AGamePlayerState>(PlayerState))
+			{
+				GamePlayerState->ResetMatchScore();
+				GamePlayerState->ResetCombatStateForRespawn();
+			}
+		}
+
+		DeathmatchGameState->NotifyScoreboardChanged();
+	}
+
+	StartDeathmatch();
+
+	for (FConstPlayerControllerIterator PlayerControllerIt = World->GetPlayerControllerIterator(); PlayerControllerIt; ++PlayerControllerIt)
+	{
+		if (APlayerController* PlayerController = PlayerControllerIt->Get())
+		{
+			RespawnPlayer(PlayerController);
+		}
+	}
+
+	RefreshScoreboardState();
 }
 
 void ADeathmatchGameMode::HandleMatchTimerTick()

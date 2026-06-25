@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/DeathmatchGameState.h"
 #include "GameFramework/PlayerController.h"
 #include "TimerManager.h"
 #include "GamePlayerController.generated.h"
@@ -75,13 +76,31 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
 	void OnCrosshairVisibilityChanged(bool bShouldBeVisible);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI|Deathmatch")
+	void OnDeathmatchPhaseChanged(EDeathmatchPhase NewPhase, EDeathmatchPhase OldPhase);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI|Deathmatch")
+	void OnMatchResultChanged(FDeathmatchMatchResult MatchResult);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI|Deathmatch")
+	void OnMatchEnded(FDeathmatchMatchResult MatchResult);
+
 private:
 	void NotifyLocalPawnChanged(APawn* NewPawn);
+	void BindDeathmatchGameState();
+	void UnbindDeathmatchGameState();
 	void StartLocalRespawnCountdown(const FString& KillerName, float RespawnDelay);
 	void HandleRespawnCountdownTick();
 	void BroadcastRespawnCountdownUpdate();
 	void ClearLocalRespawnCountdown(bool bNotifyFinished);
 
+	UFUNCTION()
+	void HandleDeathmatchPhaseChanged(EDeathmatchPhase NewPhase, EDeathmatchPhase OldPhase);
+
+	UFUNCTION()
+	void HandleMatchResultChanged(FDeathmatchMatchResult MatchResult);
+
+	TWeakObjectPtr<ADeathmatchGameState> BoundDeathmatchGameState;
 	FTimerHandle RespawnCountdownTimerHandle;
 	FString ActiveRespawnKillerName;
 	float RespawnCountdownEndTime = 0.0f;

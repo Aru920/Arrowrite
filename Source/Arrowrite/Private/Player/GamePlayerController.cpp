@@ -4,15 +4,27 @@
 
 #include "Engine/World.h"
 
+namespace
+{
+	bool HasMatchResultForUI(const FDeathmatchMatchResult& MatchResult)
+	{
+		return MatchResult.WinnerPlayerState != nullptr
+			|| MatchResult.WinningKills > 0
+			|| MatchResult.bWasTie;
+	}
+}
+
 void AGamePlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
 	NotifyLocalPawnChanged(GetPawn());
+	BindDeathmatchGameState();
 }
 
 void AGamePlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UnbindDeathmatchGameState();
 	ClearLocalRespawnCountdown(false);
 
 	Super::EndPlay(EndPlayReason);
@@ -23,6 +35,7 @@ void AGamePlayerController::SetPawn(APawn* InPawn)
 	Super::SetPawn(InPawn);
 
 	NotifyLocalPawnChanged(InPawn);
+	BindDeathmatchGameState();
 }
 
 void AGamePlayerController::ClientRefreshLocalPawn_Implementation(APawn* NewPawn)
@@ -119,6 +132,42 @@ void AGamePlayerController::NotifyLocalPawnChanged(APawn* NewPawn)
 	}
 }
 
+void AGamePlayerController::BindDeathmatchGameState()
+{
+	if (!IsLocalController() || BoundDeathmatchGameState.IsValid())
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	ADeathmatchGameState* DeathmatchGameState = World ? World->GetGameState<ADeathmatchGameState>() : nullptr;
+	if (!DeathmatchGameState)
+	{
+		return;
+	}
+
+	BoundDeathmatchGameState = DeathmatchGameState;
+	DeathmatchGameState->OnDeathmatchPhaseChanged.AddUniqueDynamic(this, &ThisClass::HandleDeathmatchPhaseChanged);
+	DeathmatchGameState->OnMatchResultChanged.AddUniqueDynamic(this, &ThisClass::HandleMatchResultChanged);
+
+	HandleMatchResultChanged(DeathmatchGameState->GetMatchResult());
+	HandleDeathmatchPhaseChanged(DeathmatchGameState->GetDeathmatchPhase(), DeathmatchGameState->GetDeathmatchPhase());
+}
+
+void AGamePlayerController::UnbindDeathmatchGameState()
+{
+	ADeathmatchGameState* DeathmatchGameState = BoundDeathmatchGameState.Get();
+	if (!DeathmatchGameState)
+	{
+		BoundDeathmatchGameState.Reset();
+		return;
+	}
+
+	DeathmatchGameState->OnDeathmatchPhaseChanged.RemoveDynamic(this, &ThisClass::HandleDeathmatchPhaseChanged);
+	DeathmatchGameState->OnMatchResultChanged.RemoveDynamic(this, &ThisClass::HandleMatchResultChanged);
+	BoundDeathmatchGameState.Reset();
+}
+
 void AGamePlayerController::StartLocalRespawnCountdown(const FString& KillerName, float RespawnDelay)
 {
 	UWorld* World = GetWorld();
@@ -173,6 +222,54 @@ void AGamePlayerController::BroadcastRespawnCountdownUpdate()
 	{
 		LastRespawnCountdownSecond = SecondsRemaining;
 		OnRespawnCountdownSecondChanged(ActiveRespawnKillerName, SecondsRemaining);
+	}
+}
+
+void AGamePlayerController::HandleDeathmatchPhaseChanged(EDeathmatchPhase NewPhase, EDeathmatchPhase OldPhase)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	OnDeathmatchPhaseChanged(NewPhase, OldPhase);
+
+	if (NewPhase == EDeathmatchPhase::MatchEnded)
+	{
+		ClearLocalRespawnCountdown(true);
+		OnCombatHUDVisibilityChanged(false);
+		OnCrosshairVisibilityChanged(false);
+
+		const ADeathmatchGameState* DeathmatchGameState = BoundDeathmatchGameState.Get();
+		if (DeathmatchGameState && HasMatchResultForUI(DeathmatchGameState->GetMatchResult()))
+		{
+			OnMatchEnded(DeathmatchGameState->GetMatchResult());
+		}
+
+		return;
+	}
+
+	if (NewPhase == EDeathmatchPhase::InProgress)
+	{
+		OnCombatHUDVisibilityChanged(GetPawn() != nullptr && !bRespawnCountdownActive);
+	}
+}
+
+void AGamePlayerController::HandleMatchResultChanged(FDeathmatchMatchResult MatchResult)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	OnMatchResultChanged(MatchResult);
+
+	const ADeathmatchGameState* DeathmatchGameState = BoundDeathmatchGameState.Get();
+	if (DeathmatchGameState
+		&& DeathmatchGameState->GetDeathmatchPhase() == EDeathmatchPhase::MatchEnded
+		&& HasMatchResultForUI(MatchResult))
+	{
+		OnMatchEnded(MatchResult);
 	}
 }
 
