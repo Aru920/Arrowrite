@@ -29,6 +29,7 @@ void ADeathmatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(ADeathmatchGameState, RemainingMatchTime);
 	DOREPLIFETIME(ADeathmatchGameState, LatestKillFeedEntry);
 	DOREPLIFETIME(ADeathmatchGameState, ScoreboardEntries);
+	DOREPLIFETIME(ADeathmatchGameState, MatchResult);
 }
 
 void ADeathmatchGameState::AddPlayerState(APlayerState* PlayerState)
@@ -69,6 +70,24 @@ void ADeathmatchGameState::SetRemainingMatchTime(int32 NewRemainingTime)
 	const int32 OldRemainingTime = RemainingMatchTime;
 	RemainingMatchTime = NewRemainingTime;
 	OnRemainingMatchTimeChanged.Broadcast(RemainingMatchTime, OldRemainingTime);
+	ForceNetUpdate();
+}
+
+void ADeathmatchGameState::SetMatchResult(APlayerState* WinnerPlayerState, int32 InWinningKills, bool bInWasTie)
+{
+	InWinningKills = FMath::Max(0, InWinningKills);
+	if (MatchResult.WinnerPlayerState.Get() == WinnerPlayerState
+		&& MatchResult.WinningKills == InWinningKills
+		&& MatchResult.bWasTie == bInWasTie)
+	{
+		return;
+	}
+
+	MatchResult.WinnerPlayerState = WinnerPlayerState;
+	MatchResult.WinningKills = InWinningKills;
+	MatchResult.bWasTie = bInWasTie;
+
+	OnMatchResultChanged.Broadcast(MatchResult);
 	ForceNetUpdate();
 }
 
@@ -123,6 +142,11 @@ void ADeathmatchGameState::OnRep_ScoreboardEntries()
 	}
 
 	OnScoreboardChanged.Broadcast();
+}
+
+void ADeathmatchGameState::OnRep_MatchResult()
+{
+	OnMatchResultChanged.Broadcast(MatchResult);
 }
 
 void ADeathmatchGameState::RebuildScoreboardEntries()

@@ -46,10 +46,26 @@ struct FDeathmatchScoreboardEntry
 	int32 Deaths = 0;
 };
 
+USTRUCT(BlueprintType)
+struct FDeathmatchMatchResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Deathmatch")
+	TObjectPtr<APlayerState> WinnerPlayerState = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Deathmatch")
+	int32 WinningKills = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Deathmatch")
+	bool bWasTie = false;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDeathmatchPhaseChangedDelegate, EDeathmatchPhase, NewPhase, EDeathmatchPhase, OldPhase);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMatchTimeChangedDelegate, int32, NewRemainingTime, int32, OldRemainingTime);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDeathmatchKillFeedDelegate, FDeathmatchKillFeedEntry, KillFeedEntry);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDeathmatchScoreboardChangedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDeathmatchMatchResultChangedDelegate, FDeathmatchMatchResult, MatchResult);
 
 UCLASS()
 class ARROWRITE_API ADeathmatchGameState : public AGameStateBase
@@ -73,11 +89,26 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Deathmatch")
 	const TArray<FDeathmatchScoreboardEntry>& GetScoreboardEntries() const { return ScoreboardEntries; }
 
+	UFUNCTION(BlueprintPure, Category = "Deathmatch|Result")
+	const FDeathmatchMatchResult& GetMatchResult() const { return MatchResult; }
+
+	UFUNCTION(BlueprintPure, Category = "Deathmatch|Result")
+	APlayerState* GetWinnerPlayerState() const { return MatchResult.WinnerPlayerState.Get(); }
+
+	UFUNCTION(BlueprintPure, Category = "Deathmatch|Result")
+	int32 GetWinningKills() const { return MatchResult.WinningKills; }
+
+	UFUNCTION(BlueprintPure, Category = "Deathmatch|Result")
+	bool WasMatchTie() const { return MatchResult.bWasTie; }
+
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Deathmatch")
 	void SetDeathmatchPhase(EDeathmatchPhase NewPhase);
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Deathmatch")
 	void SetRemainingMatchTime(int32 NewRemainingTime);
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Deathmatch|Result")
+	void SetMatchResult(APlayerState* WinnerPlayerState, int32 InWinningKills, bool bInWasTie);
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Deathmatch")
 	void PushKillFeedEntry(APlayerState* KillerPlayerState, APlayerState* VictimPlayerState);
@@ -97,6 +128,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Deathmatch")
 	FDeathmatchScoreboardChangedDelegate OnScoreboardChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "Deathmatch|Result")
+	FDeathmatchMatchResultChangedDelegate OnMatchResultChanged;
+
 protected:
 	UFUNCTION()
 	void OnRep_DeathmatchPhase(EDeathmatchPhase OldPhase);
@@ -109,6 +143,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ScoreboardEntries();
+
+	UFUNCTION()
+	void OnRep_MatchResult();
 
 	void RebuildScoreboardEntries();
 
@@ -123,6 +160,9 @@ protected:
 
 	UPROPERTY(ReplicatedUsing = OnRep_ScoreboardEntries, BlueprintReadOnly, Category = "Deathmatch")
 	TArray<FDeathmatchScoreboardEntry> ScoreboardEntries;
+
+	UPROPERTY(ReplicatedUsing = OnRep_MatchResult, BlueprintReadOnly, Category = "Deathmatch|Result")
+	FDeathmatchMatchResult MatchResult;
 
 	int32 NextKillFeedEntryId = 1;
 };
