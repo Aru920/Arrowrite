@@ -7,12 +7,16 @@ namespace ArrowriteGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_Aim, "Input.Aim");
 	UE_DEFINE_GAMEPLAY_TAG(Input_Fire, "Input.Fire");
 	UE_DEFINE_GAMEPLAY_TAG(Input_ArrowMenu, "Input.ArrowMenu");
+	UE_DEFINE_GAMEPLAY_TAG(Input_Dash, "Input.Dash");
 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Bow_Aim, "Ability.Bow.Aim");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Bow_Fire, "Ability.Bow.Fire");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Bow_ArrowMenu, "Ability.Bow.ArrowMenu");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Player_Death, "Ability.Player.Death");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Player_HitReact, "Ability.Player.HitReact");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Player_Dash, "Ability.Player.Dash");
+
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Player_Dash, "Cooldown.Player.Dash");
 
 	UE_DEFINE_GAMEPLAY_TAG(State_Aiming, "State.Aiming");
 	UE_DEFINE_GAMEPLAY_TAG(State_DrawingBow, "State.DrawingBow");
@@ -20,6 +24,7 @@ namespace ArrowriteGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Bow_Reloading, "State.Bow.Reloading");
 	UE_DEFINE_GAMEPLAY_TAG(State_Dead, "State.Dead");
 	UE_DEFINE_GAMEPLAY_TAG(State_HitReacting, "State.HitReacting");
+	UE_DEFINE_GAMEPLAY_TAG(State_Dashing, "State.Dashing");
 	UE_DEFINE_GAMEPLAY_TAG(State_Burning, "State.Burning");
 	UE_DEFINE_GAMEPLAY_TAG(State_Poisoned, "State.Poisoned");
 	UE_DEFINE_GAMEPLAY_TAG(State_Frozen, "State.Frozen");
