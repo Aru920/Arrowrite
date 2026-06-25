@@ -71,6 +71,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Combat|Death")
 	bool IsDeathStateActive() const { return bDeathStateActive; }
 
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Match")
+	void SetMatchInputBlocked(bool bShouldBlock);
+
+	UFUNCTION(BlueprintPure, Category = "Match")
+	bool IsMatchInputBlocked() const { return bMatchInputBlocked; }
+
 	UFUNCTION(BlueprintCallable, Category = "Combat|Death")
 	void RequestRespawn(float RespawnDelay = 3.0f);
 
@@ -90,6 +96,7 @@ private:
 	void ApplyAimingGameplayTag();
 	void SetDeathState(bool bNewDeathState);
 	void ApplyDeathState();
+	void ApplyMatchInputBlocked();
 	void InitAbilityActorInfo();
 	void BindAttributeDelegates();
 	void GiveStartupAbilities();
@@ -129,6 +136,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_DeathStateActive();
+
+	UFUNCTION()
+	void OnRep_MatchInputBlocked();
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -175,6 +185,9 @@ protected:
 
 	UPROPERTY(ReplicatedUsing = OnRep_DeathStateActive, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
 	bool bDeathStateActive = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_MatchInputBlocked, BlueprintReadOnly, Category = "Match", meta = (AllowPrivateAccess = "true"))
+	bool bMatchInputBlocked = false;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
 	EHitReactDirection LastHitReactDirection = EHitReactDirection::Front;

@@ -8,6 +8,7 @@
 
 class AController;
 class APlayerController;
+class APlayerCharacter;
 
 UCLASS()
 class ARROWRITE_API ADeathmatchGameMode : public AGameModeBase
@@ -29,14 +30,21 @@ public:
 
 protected:
 	void RespawnPlayer(AController* Controller);
+	void StartWarmup();
 	void StartDeathmatch();
 	void FinishDeathmatch();
 	void ScheduleDeathmatchRestart();
 	void RestartDeathmatchRound();
+	void HandleWarmupTimerTick();
 	void HandleMatchTimerTick();
 	void RefreshScoreboardState();
+	void SetMatchInputBlockedForController(AController* Controller, bool bShouldBlock);
+	void SetMatchInputBlockedForAllPlayers(bool bShouldBlock);
 	void ClearPendingRespawn(AController* Controller, bool bClearTimer);
 	void ClearAllPendingRespawns();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch", meta = (ClampMin = "0"))
+	int32 WarmupDurationSeconds = 10;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch", meta = (ClampMin = "0"))
 	int32 MatchDurationSeconds = 600;
@@ -51,6 +59,7 @@ private:
 	TSet<TWeakObjectPtr<AController>> PendingRespawnControllers;
 	TMap<TWeakObjectPtr<AController>, FString> PendingRespawnKillerNames;
 	TMap<TWeakObjectPtr<AController>, FTimerHandle> PendingRespawnTimerHandles;
+	FTimerHandle WarmupTimerHandle;
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle MatchRestartTimerHandle;
 };

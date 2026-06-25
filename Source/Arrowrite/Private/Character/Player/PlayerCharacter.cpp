@@ -59,6 +59,7 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 	DOREPLIFETIME(APlayerCharacter, bBowAimPoseActive);
 	DOREPLIFETIME(APlayerCharacter, bDeathStateActive);
+	DOREPLIFETIME(APlayerCharacter, bMatchInputBlocked);
 	DOREPLIFETIME(APlayerCharacter, LastHitReactDirection);
 }
 
@@ -163,6 +164,24 @@ void APlayerCharacter::ExitDeathState()
 	SetDeathState(false);
 }
 
+void APlayerCharacter::SetMatchInputBlocked(bool bShouldBlock)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (bMatchInputBlocked == bShouldBlock)
+	{
+		ApplyMatchInputBlocked();
+		return;
+	}
+
+	bMatchInputBlocked = bShouldBlock;
+	ApplyMatchInputBlocked();
+	ForceNetUpdate();
+}
+
 void APlayerCharacter::RequestRespawn(float RespawnDelay)
 {
 	if (!HasAuthority())
@@ -261,9 +280,40 @@ void APlayerCharacter::ApplyDeathState()
 
 	if (MovementComponent)
 	{
-		MovementComponent->SetMovementMode(MOVE_Walking);
+		if (bMatchInputBlocked)
+		{
+			MovementComponent->StopMovementImmediately();
+			MovementComponent->DisableMovement();
+		}
+		else
+		{
+			MovementComponent->SetMovementMode(MOVE_Walking);
+			ApplyMovementSettings();
+		}
+	}
+}
+
+void APlayerCharacter::ApplyMatchInputBlocked()
+{
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if (!MovementComponent || bDeathStateActive)
+	{
+		return;
 	}
 
+	if (bMatchInputBlocked)
+	{
+		bIsSprinting = false;
+		bBowAimPoseActive = false;
+		ApplyAimingGameplayTag();
+		ApplyBowAimPoseActive();
+
+		MovementComponent->StopMovementImmediately();
+		MovementComponent->DisableMovement();
+		return;
+	}
+
+	MovementComponent->SetMovementMode(MOVE_Walking);
 	ApplyMovementSettings();
 }
 
@@ -407,7 +457,7 @@ void APlayerCharacter::GiveStartupAbilities()
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
-	if (bDeathStateActive)
+	if (bDeathStateActive || bMatchInputBlocked)
 	{
 		return;
 	}
@@ -442,7 +492,7 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 
 void APlayerCharacter::StartSprinting()
 {
-	if (bDeathStateActive)
+	if (bDeathStateActive || bMatchInputBlocked)
 	{
 		return;
 	}
@@ -457,7 +507,7 @@ void APlayerCharacter::StopSprinting()
 
 void APlayerCharacter::AbilityInputTagPressed(FGameplayTag InputTag)
 {
-	if (bDeathStateActive)
+	if (bDeathStateActive || bMatchInputBlocked)
 	{
 		return;
 	}
@@ -530,4 +580,9 @@ void APlayerCharacter::OnRep_BowAimPoseActive()
 void APlayerCharacter::OnRep_DeathStateActive()
 {
 	ApplyDeathState();
+}
+
+void APlayerCharacter::OnRep_MatchInputBlocked()
+{
+	ApplyMatchInputBlocked();
 }
