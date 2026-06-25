@@ -62,6 +62,12 @@ void ADeathmatchGameMode::RecordPlayerDeath(AController* VictimController, ACont
 		return;
 	}
 
+	ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>();
+	if (!DeathmatchGameState || DeathmatchGameState->GetDeathmatchPhase() != EDeathmatchPhase::InProgress)
+	{
+		return;
+	}
+
 	AGamePlayerState* VictimPlayerState = VictimController->GetPlayerState<AGamePlayerState>();
 	if (!VictimPlayerState)
 	{
@@ -84,11 +90,8 @@ void ADeathmatchGameMode::RecordPlayerDeath(AController* VictimController, ACont
 
 	PendingRespawnKillerNames.Add(VictimController, KillerName);
 
-	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
-	{
-		DeathmatchGameState->PushKillFeedEntry(KillerPlayerState, VictimPlayerState);
-		DeathmatchGameState->NotifyScoreboardChanged();
-	}
+	DeathmatchGameState->PushKillFeedEntry(KillerPlayerState, VictimPlayerState);
+	DeathmatchGameState->NotifyScoreboardChanged();
 }
 
 void ADeathmatchGameMode::RequestPlayerRespawn(AController* Controller, float RespawnDelay)
@@ -191,6 +194,7 @@ void ADeathmatchGameMode::StartDeathmatch()
 {
 	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
 	{
+		DeathmatchGameState->SetMatchResult(nullptr, 0, false);
 		DeathmatchGameState->SetDeathmatchPhase(EDeathmatchPhase::InProgress);
 		DeathmatchGameState->SetRemainingMatchTime(MatchDurationSeconds);
 	}
@@ -207,6 +211,38 @@ void ADeathmatchGameMode::FinishDeathmatch()
 
 	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
 	{
+		APlayerState* WinnerPlayerState = nullptr;
+		int32 WinningKills = 0;
+		int32 PlayersWithWinningKills = 0;
+		bool bHasPlayer = false;
+
+		for (APlayerState* PlayerState : DeathmatchGameState->PlayerArray)
+		{
+			if (!PlayerState)
+			{
+				continue;
+			}
+
+			const AGamePlayerState* GamePlayerState = Cast<AGamePlayerState>(PlayerState);
+			const int32 PlayerKills = GamePlayerState
+				? GamePlayerState->GetKills()
+				: FMath::Max(0, FMath::RoundToInt(PlayerState->GetScore()));
+
+			if (!bHasPlayer || PlayerKills > WinningKills)
+			{
+				bHasPlayer = true;
+				WinnerPlayerState = PlayerState;
+				WinningKills = PlayerKills;
+				PlayersWithWinningKills = 1;
+			}
+			else if (PlayerKills == WinningKills)
+			{
+				++PlayersWithWinningKills;
+			}
+		}
+
+		const bool bWasTie = bHasPlayer && PlayersWithWinningKills > 1;
+		DeathmatchGameState->SetMatchResult(bWasTie ? nullptr : WinnerPlayerState, WinningKills, bWasTie);
 		DeathmatchGameState->SetRemainingMatchTime(0);
 		DeathmatchGameState->SetDeathmatchPhase(EDeathmatchPhase::MatchEnded);
 	}
