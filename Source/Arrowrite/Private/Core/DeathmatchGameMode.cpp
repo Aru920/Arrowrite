@@ -47,6 +47,7 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 		FTimerDelegate MatchInputBlockedDelegate;
 		MatchInputBlockedDelegate.BindUObject(this, &ThisClass::SetMatchInputBlockedForController, NewController, true);
 		GetWorldTimerManager().SetTimerForNextTick(MatchInputBlockedDelegate);
+		GetWorldTimerManager().SetTimerForNextTick(this, &ThisClass::TryStartWarmupCountdown);
 	}
 }
 
@@ -63,6 +64,7 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 
 	RefreshScoreboardState();
 	GetWorldTimerManager().SetTimerForNextTick(this, &ThisClass::RefreshScoreboardState);
+	GetWorldTimerManager().SetTimerForNextTick(this, &ThisClass::TryStartWarmupCountdown);
 }
 
 void ADeathmatchGameMode::RecordPlayerDeath(AController* VictimController, AController* KillerController)
@@ -223,15 +225,10 @@ void ADeathmatchGameMode::ClearAllPendingRespawns()
 
 void ADeathmatchGameMode::StartWarmup()
 {
+	GetWorldTimerManager().ClearTimer(WarmupTimerHandle);
 	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
 	GetWorldTimerManager().ClearTimer(MatchRestartTimerHandle);
 	ClearAllPendingRespawns();
-
-	if (WarmupDurationSeconds <= 0)
-	{
-		StartDeathmatch();
-		return;
-	}
 
 	if (ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>())
 	{
@@ -241,7 +238,7 @@ void ADeathmatchGameMode::StartWarmup()
 	}
 
 	SetMatchInputBlockedForAllPlayers(true);
-	GetWorldTimerManager().SetTimer(WarmupTimerHandle, this, &ThisClass::HandleWarmupTimerTick, 1.0f, true);
+	TryStartWarmupCountdown();
 }
 
 void ADeathmatchGameMode::StartDeathmatch()
@@ -383,12 +380,53 @@ void ADeathmatchGameMode::RestartDeathmatchRound()
 	RefreshScoreboardState();
 }
 
+void ADeathmatchGameMode::TryStartWarmupCountdown()
+{
+	if (!HasAuthority() || !bAutoStartMatch)
+	{
+		return;
+	}
+
+	ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>();
+	if (!DeathmatchGameState || DeathmatchGameState->GetDeathmatchPhase() != EDeathmatchPhase::WaitingToStart)
+	{
+		return;
+	}
+
+	SetMatchInputBlockedForAllPlayers(true);
+
+	if (!HasEnoughPlayersToStart())
+	{
+		GetWorldTimerManager().ClearTimer(WarmupTimerHandle);
+		DeathmatchGameState->SetRemainingMatchTime(WarmupDurationSeconds);
+		return;
+	}
+
+	if (WarmupDurationSeconds <= 0)
+	{
+		StartDeathmatch();
+		return;
+	}
+
+	if (!GetWorldTimerManager().IsTimerActive(WarmupTimerHandle))
+	{
+		DeathmatchGameState->SetRemainingMatchTime(WarmupDurationSeconds);
+		GetWorldTimerManager().SetTimer(WarmupTimerHandle, this, &ThisClass::HandleWarmupTimerTick, 1.0f, true);
+	}
+}
+
 void ADeathmatchGameMode::HandleWarmupTimerTick()
 {
 	ADeathmatchGameState* DeathmatchGameState = GetGameState<ADeathmatchGameState>();
 	if (!DeathmatchGameState || DeathmatchGameState->GetDeathmatchPhase() != EDeathmatchPhase::WaitingToStart)
 	{
 		GetWorldTimerManager().ClearTimer(WarmupTimerHandle);
+		return;
+	}
+
+	if (!HasEnoughPlayersToStart())
+	{
+		TryStartWarmupCountdown();
 		return;
 	}
 
@@ -399,6 +437,31 @@ void ADeathmatchGameMode::HandleWarmupTimerTick()
 	{
 		StartDeathmatch();
 	}
+}
+
+int32 ADeathmatchGameMode::GetConnectedPlayerCount() const
+{
+	const UWorld* World = GetWorld();
+	if (!World || World->bIsTearingDown)
+	{
+		return 0;
+	}
+
+	int32 ConnectedPlayerCount = 0;
+	for (FConstPlayerControllerIterator PlayerControllerIt = World->GetPlayerControllerIterator(); PlayerControllerIt; ++PlayerControllerIt)
+	{
+		if (IsValid(PlayerControllerIt->Get()))
+		{
+			++ConnectedPlayerCount;
+		}
+	}
+
+	return ConnectedPlayerCount;
+}
+
+bool ADeathmatchGameMode::HasEnoughPlayersToStart() const
+{
+	return GetConnectedPlayerCount() >= FMath::Max(1, MinimumPlayersToStart);
 }
 
 void ADeathmatchGameMode::HandleMatchTimerTick()

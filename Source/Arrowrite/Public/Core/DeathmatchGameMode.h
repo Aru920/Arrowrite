@@ -35,6 +35,7 @@ protected:
 	void FinishDeathmatch();
 	void ScheduleDeathmatchRestart();
 	void RestartDeathmatchRound();
+	void TryStartWarmupCountdown();
 	void HandleWarmupTimerTick();
 	void HandleMatchTimerTick();
 	void RefreshScoreboardState();
@@ -42,9 +43,14 @@ protected:
 	void SetMatchInputBlockedForAllPlayers(bool bShouldBlock);
 	void ClearPendingRespawn(AController* Controller, bool bClearTimer);
 	void ClearAllPendingRespawns();
+	int32 GetConnectedPlayerCount() const;
+	bool HasEnoughPlayersToStart() const;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch", meta = (ClampMin = "0"))
 	int32 WarmupDurationSeconds = 10;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch", meta = (ClampMin = "1"))
+	int32 MinimumPlayersToStart = 2;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Deathmatch", meta = (ClampMin = "0"))
 	int32 MatchDurationSeconds = 600;

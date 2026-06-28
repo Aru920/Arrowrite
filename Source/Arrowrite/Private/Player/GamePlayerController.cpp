@@ -2,7 +2,9 @@
 
 #include "Player/GamePlayerController.h"
 
+#include "Core/ArrowriteGameInstance.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerState.h"
 
 namespace
 {
@@ -20,6 +22,7 @@ void AGamePlayerController::BeginPlay()
 
 	NotifyLocalPawnChanged(GetPawn());
 	BindDeathmatchGameState();
+	ApplySavedPlayerName();
 }
 
 void AGamePlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -36,6 +39,7 @@ void AGamePlayerController::SetPawn(APawn* InPawn)
 
 	NotifyLocalPawnChanged(InPawn);
 	BindDeathmatchGameState();
+	ApplySavedPlayerName();
 }
 
 void AGamePlayerController::ClientRefreshLocalPawn_Implementation(APawn* NewPawn)
@@ -127,9 +131,48 @@ void AGamePlayerController::NotifyLocalPawnChanged(APawn* NewPawn)
 
 	if (IsLocalController())
 	{
+		if (NewPawn)
+		{
+			ApplyGameplayInputMode();
+		}
+
 		OnLocalPawnChanged(NewPawn);
 		OnCombatHUDVisibilityChanged(NewPawn != nullptr && !bRespawnCountdownActive);
 	}
+}
+
+void AGamePlayerController::ApplyGameplayInputMode()
+{
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+	SetIgnoreMoveInput(false);
+	SetIgnoreLookInput(false);
+}
+
+void AGamePlayerController::ApplySavedPlayerName()
+{
+	if (!IsLocalController() || !PlayerState)
+	{
+		return;
+	}
+
+	const UArrowriteGameInstance* ArrowriteGameInstance = GetGameInstance<UArrowriteGameInstance>();
+	if (!ArrowriteGameInstance)
+	{
+		return;
+	}
+
+	const FString& DesiredPlayerName = ArrowriteGameInstance->GetDesiredPlayerName();
+	if (DesiredPlayerName.IsEmpty()
+		|| DesiredPlayerName == LastAppliedPlayerName
+		|| DesiredPlayerName == PlayerState->GetPlayerName())
+	{
+		return;
+	}
+
+	LastAppliedPlayerName = DesiredPlayerName;
+	SetName(DesiredPlayerName);
 }
 
 void AGamePlayerController::BindDeathmatchGameState()
@@ -249,6 +292,8 @@ void AGamePlayerController::HandleDeathmatchPhaseChanged(EDeathmatchPhase NewPha
 		return;
 	}
 
+	OnMatchEndScreenCleared();
+
 	if (NewPhase == EDeathmatchPhase::InProgress)
 	{
 		OnCombatHUDVisibilityChanged(GetPawn() != nullptr && !bRespawnCountdownActive);
@@ -263,6 +308,12 @@ void AGamePlayerController::HandleMatchResultChanged(FDeathmatchMatchResult Matc
 	}
 
 	OnMatchResultChanged(MatchResult);
+
+	if (!HasMatchResultForUI(MatchResult))
+	{
+		OnMatchEndScreenCleared();
+		return;
+	}
 
 	const ADeathmatchGameState* DeathmatchGameState = BoundDeathmatchGameState.Get();
 	if (DeathmatchGameState

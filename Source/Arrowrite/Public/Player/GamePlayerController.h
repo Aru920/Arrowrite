@@ -85,8 +85,13 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI|Deathmatch")
 	void OnMatchEnded(FDeathmatchMatchResult MatchResult);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI|Deathmatch")
+	void OnMatchEndScreenCleared();
+
 private:
 	void NotifyLocalPawnChanged(APawn* NewPawn);
+	void ApplyGameplayInputMode();
+	void ApplySavedPlayerName();
 	void BindDeathmatchGameState();
 	void UnbindDeathmatchGameState();
 	void StartLocalRespawnCountdown(const FString& KillerName, float RespawnDelay);
@@ -106,5 +111,6 @@ private:
 	float RespawnCountdownEndTime = 0.0f;
 	float RespawnCountdownTotalTime = 0.0f;
 	int32 LastRespawnCountdownSecond = INDEX_NONE;
+	FString LastAppliedPlayerName;
 	bool bRespawnCountdownActive = false;
 };

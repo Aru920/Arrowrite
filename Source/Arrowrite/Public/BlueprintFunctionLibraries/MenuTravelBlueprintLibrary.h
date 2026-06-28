@@ -16,5 +16,11 @@ public:
 	static void HostListenServer(const UObject* WorldContextObject, FName MapName = TEXT("ThirdPersonMap"));
 
 	UFUNCTION(BlueprintCallable, Category = "Menu|Travel", meta = (WorldContext = "WorldContextObject"))
+	static void HostListenServerWithPlayerName(const UObject* WorldContextObject, const FString& PlayerName, FName MapName = TEXT("ThirdPersonMap"));
+
+	UFUNCTION(BlueprintCallable, Category = "Menu|Travel", meta = (WorldContext = "WorldContextObject"))
 	static bool JoinServerByAddress(const UObject* WorldContextObject, const FString& ServerAddress);
+
+	UFUNCTION(BlueprintCallable, Category = "Menu|Travel", meta = (WorldContext = "WorldContextObject"))
+	static bool JoinServerByAddressWithPlayerName(const UObject* WorldContextObject, const FString& ServerAddress, const FString& PlayerName);
 };
